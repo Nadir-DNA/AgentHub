@@ -3,6 +3,7 @@ mod commands;
 mod db;
 mod llm;
 mod models;
+mod packs;
 mod state;
 mod store;
 
@@ -48,6 +49,8 @@ pub fn run() {
             commands::get_agent,
             commands::save_agent,
             commands::delete_agent,
+            commands::list_packs,
+            commands::apply_pack,
             commands::send_message,
             commands::get_history,
             commands::clear_history,

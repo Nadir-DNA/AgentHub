@@ -65,6 +65,38 @@ pub struct AppConfig {
     pub has_api_key: bool,
 }
 
+/// Un pack métier : une équipe d'agents pré-configurée pour un secteur.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Pack {
+    pub id: String,
+    pub label: String,
+    pub icon: String,
+    pub description: String,
+    pub agents: Vec<Agent>,
+}
+
+/// Vue allégée d'un pack pour l'UI (sans le détail des agents).
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PackInfo {
+    pub id: String,
+    pub label: String,
+    pub icon: String,
+    pub description: String,
+    pub agent_count: usize,
+}
+
+impl From<&Pack> for PackInfo {
+    fn from(p: &Pack) -> Self {
+        PackInfo {
+            id: p.id.clone(),
+            label: p.label.clone(),
+            icon: p.icon.clone(),
+            description: p.description.clone(),
+            agent_count: p.agents.len(),
+        }
+    }
+}
+
 impl Default for AppConfig {
     fn default() -> Self {
         AppConfig {

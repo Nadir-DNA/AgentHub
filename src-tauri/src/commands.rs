@@ -2,9 +2,9 @@
 //!
 //! Toutes renvoient `Result<_, String>` — l'erreur est affichée côté UI.
 
-use crate::models::{Agent, AppConfig, Message};
+use crate::models::{Agent, AppConfig, Message, PackInfo};
 use crate::state::AppState;
-use crate::{db, llm, store};
+use crate::{db, llm, packs, store};
 use tauri::State;
 
 type CmdResult<T> = Result<T, String>;
@@ -79,6 +79,22 @@ pub fn save_agent(state: State<AppState>, agent: Agent) -> CmdResult<()> {
 pub fn delete_agent(state: State<AppState>, id: String) -> CmdResult<()> {
     let conn = state.db.lock().map_err(map)?;
     db::delete_agent(&conn, &id).map_err(map)
+}
+
+// ---------------------------------------------------------------------------
+// Packs métier
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn list_packs() -> CmdResult<Vec<PackInfo>> {
+    Ok(packs::all_packs().iter().map(PackInfo::from).collect())
+}
+
+/// Applique un pack métier : remplace l'équipe d'agents et mémorise le métier.
+#[tauri::command]
+pub fn apply_pack(state: State<AppState>, metier: String) -> CmdResult<Vec<Agent>> {
+    let conn = state.db.lock().map_err(map)?;
+    packs::apply(&conn, &metier).map_err(map)
 }
 
 // ---------------------------------------------------------------------------

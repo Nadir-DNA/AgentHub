@@ -40,6 +40,18 @@ export interface AppConfig {
   has_api_key: boolean
 }
 
+export interface PackInfo {
+  id: string
+  label: string
+  icon: string
+  description: string
+  agent_count: number
+}
+
+// --- Packs métier ---
+export const listPacks = () => invoke<PackInfo[]>('list_packs')
+export const applyPack = (metier: string) => invoke<Agent[]>('apply_pack', { metier })
+
 // --- Config ---
 export const getConfig = () => invoke<AppConfig>('get_config')
 export const saveConfig = (config: AppConfig) => invoke<void>('save_config', { config })
