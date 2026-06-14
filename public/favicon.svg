@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="hex" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="#0a0a0a"/>
+  <polygon points="256,80 370,145 370,280 256,345 142,280 142,145" fill="none" stroke="url(#hex)" stroke-width="8"/>
+  <polygon points="256,120 340,168 340,264 256,312 172,264 172,168" fill="url(#hex)" opacity="0.9"/>
+  <circle cx="256" cy="216" r="24" fill="#0a0a0a"/>
+  <circle cx="256" cy="216" r="12" fill="#A78BFA"/>
+  <line x1="256" y1="216" x2="256" y2="120" stroke="#A78BFA" stroke-width="2" opacity="0.6"/>
+  <line x1="256" y1="216" x2="340" y2="168" stroke="#A78BFA" stroke-width="2" opacity="0.6"/>
+  <line x1="256" y1="216" x2="340" y2="264" stroke="#A78BFA" stroke-width="2" opacity="0.6"/>
+  <line x1="256" y1="216" x2="256" y2="312" stroke="#A78BFA" stroke-width="2" opacity="0.6"/>
+  <line x1="256" y1="216" x2="172" y2="264" stroke="#A78BFA" stroke-width="2" opacity="0.6"/>
+  <line x1="256" y1="216" x2="172" y2="168" stroke="#A78BFA" stroke-width="2" opacity="0.6"/>
+  <circle cx="256" cy="120" r="5" fill="#60A5FA"/>
+  <circle cx="340" cy="168" r="5" fill="#60A5FA"/>
+  <circle cx="340" cy="264" r="5" fill="#60A5FA"/>
+  <circle cx="256" cy="312" r="5" fill="#60A5FA"/>
+  <circle cx="172" cy="264" r="5" fill="#60A5FA"/>
+  <circle cx="172" cy="168" r="5" fill="#60A5FA"/>
+</svg>

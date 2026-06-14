@@ -1,0 +1,27 @@
+# Config Hermes — Profile Comptable
+# Qonto, factures, trésorerie, dépenses
+
+model:
+  default: deepseek-v4-flash
+  fallbacks:
+    - grok-3
+    - gpt-4o-mini
+
+tools:
+  enabled:
+    - web_search
+    - memory
+  disabled:
+    - terminal
+    - browser
+
+  gateways:
+    - telegram
+
+memory:
+  persistent: true
+  scope: profile
+
+scheduling:
+  enabled: true
+  timezone: Europe/Paris
