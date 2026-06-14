@@ -75,6 +75,14 @@ export const getHistory = (agentId: string) =>
 export const clearHistory = (agentId: string) =>
   invoke<void>('clear_history', { agentId })
 
+// --- Orchestrateur ---
+export interface AskHubResponse {
+  agent_id: string
+  agent_name: string
+  message: Message
+}
+export const askHub = (content: string) => invoke<AskHubResponse>('ask_hub', { content })
+
 // --- Usage ---
 export const getUsage = () => invoke<number>('get_usage')
 

@@ -2,9 +2,9 @@
 //!
 //! Toutes renvoient `Result<_, String>` — l'erreur est affichée côté UI.
 
-use crate::models::{Agent, AppConfig, Message, PackInfo};
+use crate::models::{Agent, AppConfig, AskHubResponse, Message, PackInfo};
 use crate::state::AppState;
-use crate::{db, llm, packs, store};
+use crate::{db, llm, orchestrator, packs, store};
 use tauri::State;
 
 type CmdResult<T> = Result<T, String>;
@@ -109,29 +109,25 @@ fn new_id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
 
-/// Envoie un message à un agent : persiste le tour user, appelle le LLM,
-/// persiste la réponse, incrémente l'usage. Renvoie le message de l'assistant.
-#[tauri::command]
-pub async fn send_message(
-    state: State<'_, AppState>,
-    agent_id: String,
-    content: String,
-) -> CmdResult<Message> {
-    // Phase 1 (sync) : lecture config/agent/historique + persistance du message user.
+/// Cœur d'un tour de conversation, réutilisé par `send_message` et `ask_hub`.
+/// Persiste le message user, appelle le LLM, persiste la réponse + usage.
+/// Le MutexGuard est toujours libéré avant le `await` (future Send-safe).
+async fn agent_turn(state: &AppState, agent_id: &str, content: String) -> CmdResult<Message> {
+    // Phase 1 (sync) : lecture + persistance du message user.
     let (api_key, model, turns) = {
         let conn = state.db.lock().map_err(map)?;
-        let agent = db::get_agent(&conn, &agent_id)
+        let agent = db::get_agent(&conn, agent_id)
             .map_err(map)?
             .ok_or_else(|| format!("Agent « {agent_id} » introuvable"))?;
         let api_key = store::get_api_key(&conn)
             .map_err(map)?
             .ok_or_else(|| "NO_API_KEY".to_string())?;
         let cfg = db::get_config(&conn).map_err(map)?;
-        let history = db::get_messages(&conn, &agent_id).map_err(map)?;
+        let history = db::get_messages(&conn, agent_id).map_err(map)?;
 
         let user_msg = Message {
             id: new_id(),
-            agent_id: agent_id.clone(),
+            agent_id: agent_id.to_string(),
             role: "user".into(),
             content: content.clone(),
             timestamp: now_iso(),
@@ -144,7 +140,6 @@ pub async fn send_message(
         }
         turns.push(llm::ChatTurn::user(content));
         (api_key, cfg.model, turns)
-        // le MutexGuard est libéré ici, avant le await
     };
 
     // Phase 2 (async) : appel réseau au LLM.
@@ -155,7 +150,7 @@ pub async fn send_message(
     // Phase 3 (sync) : persistance de la réponse + usage.
     let assistant = Message {
         id: new_id(),
-        agent_id,
+        agent_id: agent_id.to_string(),
         role: "assistant".into(),
         content: reply,
         timestamp: now_iso(),
@@ -166,6 +161,34 @@ pub async fn send_message(
         db::incr_usage(&conn).map_err(map)?;
     }
     Ok(assistant)
+}
+
+/// Envoie un message à un agent précis.
+#[tauri::command]
+pub async fn send_message(
+    state: State<'_, AppState>,
+    agent_id: String,
+    content: String,
+) -> CmdResult<Message> {
+    agent_turn(state.inner(), &agent_id, content).await
+}
+
+/// Orchestrateur : route la demande vers l'agent le plus pertinent et répond.
+#[tauri::command]
+pub async fn ask_hub(state: State<'_, AppState>, content: String) -> CmdResult<AskHubResponse> {
+    let (agent_id, agent_name) = {
+        let conn = state.db.lock().map_err(map)?;
+        let agents = db::list_agents(&conn).map_err(map)?;
+        let id = orchestrator::route(&agents, &content);
+        let name = agents
+            .iter()
+            .find(|a| a.id == id)
+            .map(|a| a.name.clone())
+            .unwrap_or_else(|| id.clone());
+        (id, name)
+    };
+    let message = agent_turn(state.inner(), &agent_id, content).await?;
+    Ok(AskHubResponse { agent_id, agent_name, message })
 }
 
 #[tauri::command]

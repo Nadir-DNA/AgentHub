@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Settings, Bot, Calendar, TrendingUp, Zap } from 'lucide-react'
+import { Plus, Settings, Bot, Calendar, TrendingUp, Zap, Sparkles, Send } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import * as api from '../services/api'
 import type { Agent } from '../services/api'
@@ -9,6 +9,9 @@ export default function Hub() {
   const navigate = useNavigate()
   const [agents, setAgents] = useState<Agent[]>([])
   const [usage, setUsage] = useState(0)
+  const [hubQuery, setHubQuery] = useState('')
+  const [hubLoading, setHubLoading] = useState(false)
+  const [hubError, setHubError] = useState<string | null>(null)
 
   const load = useCallback(() => {
     api.listAgents().then(setAgents).catch(() => setAgents([]))
@@ -27,6 +30,27 @@ export default function Hub() {
   }, [load])
 
   const tasksCount = agents.reduce((n, a) => n + a.triggers.filter(t => t.enabled).length, 0)
+
+  const askTeam = async () => {
+    const q = hubQuery.trim()
+    if (!q || hubLoading) return
+    setHubLoading(true)
+    setHubError(null)
+    try {
+      const res = await api.askHub(q)
+      setHubQuery('')
+      navigate(`/agent/${res.agent_id}`)
+    } catch (e) {
+      const detail = typeof e === 'string' ? e : e instanceof Error ? e.message : 'erreur inconnue'
+      setHubError(
+        detail === 'NO_API_KEY'
+          ? 'Ajoutez votre clé OpenCode Go dans les Paramètres pour activer vos assistants.'
+          : detail,
+      )
+    } finally {
+      setHubLoading(false)
+    }
+  }
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -73,6 +97,36 @@ export default function Hub() {
           </div>
           <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{usage}</p>
         </div>
+      </div>
+
+      {/* Demander à l'équipe (orchestrateur) */}
+      <div className="settings-section mb-8">
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles className="w-4 h-4" style={{ color: 'var(--orange-400)' }} />
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Demander à l'équipe</h2>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>— on route vers le bon assistant</span>
+        </div>
+        <div className="flex gap-2">
+          <input
+            className="input-field flex-1"
+            value={hubQuery}
+            onChange={e => setHubQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && askTeam()}
+            disabled={hubLoading}
+            placeholder="Ex. « Quels clients relancer cette semaine ? » ou « Propose un post Instagram »"
+          />
+          <button
+            onClick={askTeam}
+            disabled={hubLoading || !hubQuery.trim()}
+            className="btn-primary flex items-center justify-center"
+            style={{ padding: '0 18px' }}
+          >
+            {hubLoading ? '…' : <Send className="w-4 h-4" />}
+          </button>
+        </div>
+        {hubError && (
+          <p className="text-xs mt-2" style={{ color: '#fca5a5' }}>⚠️ {hubError}</p>
+        )}
       </div>
 
       {/* Agents grid */}

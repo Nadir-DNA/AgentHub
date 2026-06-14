@@ -48,6 +48,14 @@ pub struct Message {
     pub timestamp: String,
 }
 
+/// Réponse de l'orchestrateur : quel agent a répondu + son message.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AskHubResponse {
+    pub agent_id: String,
+    pub agent_name: String,
+    pub message: Message,
+}
+
 /// Configuration applicative (hors secrets — la clé API vit dans le SecretStore).
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AppConfig {

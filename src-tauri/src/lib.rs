@@ -3,6 +3,7 @@ mod commands;
 mod db;
 mod llm;
 mod models;
+mod orchestrator;
 mod packs;
 mod state;
 mod store;
@@ -52,6 +53,7 @@ pub fn run() {
             commands::list_packs,
             commands::apply_pack,
             commands::send_message,
+            commands::ask_hub,
             commands::get_history,
             commands::clear_history,
             commands::get_usage,
