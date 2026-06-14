@@ -157,19 +157,20 @@ export default function Hub() {
           <Link
             key={agent.id}
             to={`/agent/${agent.id}`}
-            className="agent-card flex flex-col"
+            className="agent-card"
             style={{ '--accent': ROLE_ACCENT[agent.role] || 'var(--orange-500)' } as CSSProperties}
             onMouseMove={onTilt}
             onMouseLeave={resetTilt}
           >
-            <div className="flex-1 flex items-end justify-center pt-5 px-3" style={{ minHeight: 200 }}>
-              <AgentAvatar id={agent.role} size={196} />
+            <div className="agent-stage">
+              <div className="agent-ground" />
+              <AgentAvatar id={agent.role} size={186} />
             </div>
-            <div className="agent-card-info px-4 pt-4 pb-4">
+            <div className="agent-plate">
               <h3 className="agent-name text-[15px] font-semibold truncate transition-colors" style={{ color: 'var(--text-primary)' }}>
                 {agent.name}
               </h3>
-              <p className="text-[10px] uppercase tracking-[0.12em] mt-0.5 font-medium" style={{ color: 'var(--accent)' as string }}>
+              <p className="text-[10px] uppercase tracking-[0.14em] mt-0.5 font-semibold" style={{ color: 'var(--accent)' as string }}>
                 {agent.title}
               </p>
               <div className="flex items-center gap-1.5 mt-2.5">

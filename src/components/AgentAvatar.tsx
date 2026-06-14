@@ -1,46 +1,31 @@
-import managerImg from '../assets/agents/manager.jpg'
-import commercialImg from '../assets/agents/commercial.jpg'
-import marketingImg from '../assets/agents/marketing.jpg'
-import judiciaireImg from '../assets/agents/judiciaire.jpg'
-import techdataImg from '../assets/agents/techdata.jpg'
-import managerActive from '../assets/agents/manager-active.jpg'
-import commercialActive from '../assets/agents/commercial-active.jpg'
-import marketingActive from '../assets/agents/marketing-active.jpg'
-import judiciaireActive from '../assets/agents/judiciaire-active.jpg'
-import techdataActive from '../assets/agents/techdata-active.jpg'
+import managerCut from '../assets/agents/manager-cut.png'
+import commercialCut from '../assets/agents/commercial-cut.png'
+import marketingCut from '../assets/agents/marketing-cut.png'
+import judiciaireCut from '../assets/agents/judiciaire-cut.png'
+import techdataCut from '../assets/agents/techdata-cut.png'
 
-const REST: Record<string, string> = {
-  manager: managerImg,
-  commercial: commercialImg,
-  marketing: marketingImg,
-  judiciaire: judiciaireImg,
-  techdata: techdataImg,
-}
-
-const ACTIVE: Record<string, string> = {
-  manager: managerActive,
-  commercial: commercialActive,
-  marketing: marketingActive,
-  judiciaire: judiciaireActive,
-  techdata: techdataActive,
+const CUT: Record<string, string> = {
+  manager: managerCut,
+  commercial: commercialCut,
+  marketing: marketingCut,
+  judiciaire: judiciaireCut,
+  techdata: techdataCut,
 }
 
 /**
- * Avatar d'agent avec deux images : la version « repos » et la version
- * « active » (couleurs boostées + halo) qui apparaît en fondu au survol de
- * l'avatar ou de la carte parente (`.agent-card`).
+ * Avatar d'agent : illustration détourée (PNG transparent) qui flotte sans
+ * cadre. L'état « énergisé » (échelle + halo coloré) est piloté en CSS au
+ * survol de l'avatar ou de la carte parente (`.agent-card`).
  */
 export default function AgentAvatar({ id, size = 200 }: { id: string; size?: number }) {
-  const rest = REST[id] || REST.manager
-  const active = ACTIVE[id] || ACTIVE.manager
-  // Ratio portrait des illustrations (~0.65) : largeur déterministe pour éviter
-  // que les couches absolues ne s'étirent dans les layouts en ligne.
-  const width = Math.round(size * 0.68)
-
+  const src = CUT[id] || CUT.manager
   return (
-    <div className="avatar" style={{ height: size, width, flexShrink: 0 }}>
-      <img src={rest} alt={id} draggable={false} className="avatar-layer avatar-rest" />
-      <img src={active} alt="" aria-hidden draggable={false} className="avatar-layer avatar-active" />
-    </div>
+    <img
+      src={src}
+      alt={id}
+      draggable={false}
+      className="avatar-cut"
+      style={{ height: size, width: 'auto', maxWidth: '100%' }}
+    />
   )
 }

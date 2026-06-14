@@ -84,89 +84,89 @@ body::before {
 ::-webkit-scrollbar-thumb { background: #322e37; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #45404c; }
 
-/* ===== Avatar (2 couches, swap au hover) ===== */
-.avatar {
-  position: relative;
-  pointer-events: none;
-}
-.avatar-layer {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+/* ===== Avatar détouré (PNG transparent, flotte sans cadre) ===== */
+.avatar-cut {
+  display: block;
   object-fit: contain;
   object-position: center bottom;
-  transition: opacity 0.45s ease, transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1),
-    filter 0.45s ease;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.55));
+  transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), filter 0.45s ease;
+  will-change: transform;
   -webkit-user-drag: none;
 }
-.avatar-active { opacity: 0; }
+.avatar-cut:hover { transform: translateY(-3px) scale(1.04); }
 
-/* swap : survol direct de l'avatar OU de la carte parente */
-.avatar:hover .avatar-active,
-.agent-card:hover .avatar-active { opacity: 1; }
-.avatar:hover .avatar-rest,
-.agent-card:hover .avatar-rest { opacity: 0; }
-
-.agent-card:hover .avatar-active {
-  transform: translateY(-4px) scale(1.06);
-  filter: drop-shadow(0 14px 26px rgba(255, 107, 0, 0.35));
-}
-
-/* ===== Carte d'agent — Hub ===== */
+/* ===== Carte d'agent — Hub (personnage sur scène) ===== */
 .agent-card {
   --accent: var(--orange-500);
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 30%),
-    linear-gradient(180deg, var(--bg-card), #121116);
-  border: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #1b1922 0%, #131217 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--r-xl);
   overflow: hidden;
-  transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.4s ease,
-    border-color 0.4s ease;
+  transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.45s ease,
+    border-color 0.45s ease;
   transform-style: preserve-3d;
 }
+.agent-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  box-shadow: var(--shadow-lift), 0 0 60px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.agent-card:hover .agent-name { color: var(--accent); }
+.agent-card:hover .avatar-cut {
+  transform: translateY(-8px) scale(1.07);
+  filter: drop-shadow(0 22px 30px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 0 30px color-mix(in srgb, var(--accent) 60%, transparent));
+}
 
-/* halo radial coloré derrière l'avatar */
-.agent-card::before {
+/* scène : spotlight rôle derrière le personnage */
+.agent-stage {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-top: 18px;
+  min-height: 208px;
+}
+.agent-stage::before {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(70% 55% at 50% 18%,
-    color-mix(in srgb, var(--accent) 26%, transparent) 0%, transparent 70%);
-  opacity: 0.35;
-  transition: opacity 0.4s ease;
+  left: 50%; bottom: 4%;
+  width: 80%; height: 72%;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side,
+    color-mix(in srgb, var(--accent) 34%, transparent), transparent 78%);
+  opacity: 0.5;
+  filter: blur(8px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
   pointer-events: none;
 }
+.agent-card:hover .agent-stage::before { opacity: 1; transform: translateX(-50%) scale(1.1); }
 
-/* liseré supérieur accent */
-.agent-card::after {
-  content: '';
+/* ombre portée au sol */
+.agent-ground {
   position: absolute;
-  top: 0; left: 18%; right: 18%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  opacity: 0;
-  transition: opacity 0.4s ease;
+  left: 50%; bottom: 8px;
+  width: 58%; height: 16px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.6), transparent 72%);
+  filter: blur(3px);
+  transition: width 0.45s ease, opacity 0.45s ease;
+  pointer-events: none;
 }
+.agent-card:hover .agent-ground { width: 50%; }
 
-.agent-card:hover {
-  transform: translateY(-8px);
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
-  box-shadow: var(--shadow-lift),
-    0 0 50px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-.agent-card:hover::before { opacity: 0.85; }
-.agent-card:hover::after { opacity: 1; }
-.agent-card:hover .agent-name { color: var(--accent); }
+.agent-stage .avatar-cut { position: relative; z-index: 1; }
 
-/* barre d'info en bas de carte (glass) */
-.agent-card-info {
+/* plaque nom */
+.agent-plate {
   position: relative;
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.55) 40%);
-  backdrop-filter: blur(6px);
+  z-index: 2;
+  padding: 14px 16px 16px;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.35));
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* ===== Carte "ajouter" ===== */
