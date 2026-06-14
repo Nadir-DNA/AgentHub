@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Send, Clock, Wrench } from 'lucide-react'
+import { ArrowLeft, Send, Clock, Wrench, SlidersHorizontal } from 'lucide-react'
 import * as api from '../services/api'
-import type { Message } from '../services/api'
-import { getAgentName, getAgentShort, AGENT_META } from '../services/renames'
+import type { Message, Agent } from '../services/api'
+import { getAgentName, AGENT_META } from '../services/renames'
 import AgentAvatar from '../components/AgentAvatar'
 
 const TOOLS_AVAILABLE = [
@@ -26,13 +26,20 @@ const CRONS_DEFAULT = [
 
 export default function Agent() {
   const { id = 'manager' } = useParams()
-  const meta = AGENT_META[id] || AGENT_META.manager
+  const [agent, setAgent] = useState<Agent | null>(null)
+
+  const role = agent?.role ?? id
+  const meta = AGENT_META[role] || AGENT_META.manager
+  const displayName = agent?.name ?? getAgentName(id)
+  const displayTitle = agent?.title ?? meta.title
+  const agentTools = agent?.tools ?? meta.tools
+  const shortName = displayName.split(' ')[0] || displayName
 
   const greeting = (): Message => ({
     id: '0',
     agent_id: id,
     role: 'assistant',
-    content: `Bonjour ! Je suis ${getAgentName(id)}, votre assistant ${meta.title}. Comment puis-je vous aider aujourd'hui ?`,
+    content: `Bonjour ! Je suis ${displayName}, votre assistant ${displayTitle}. Comment puis-je vous aider aujourd'hui ?`,
     timestamp: new Date().toISOString(),
   })
 
@@ -47,6 +54,10 @@ export default function Agent() {
     window.addEventListener('agenthub-rename', handler)
     return () => window.removeEventListener('agenthub-rename', handler)
   }, [])
+
+  useEffect(() => {
+    api.getAgent(id).then(setAgent).catch(() => setAgent(null))
+  }, [id, refreshKey])
 
   useEffect(() => {
     api.getHistory(id)
@@ -112,9 +123,9 @@ export default function Agent() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <AgentAvatar id={id} size={40} />
+            <AgentAvatar id={role} size={40} />
             <div>
-              <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{getAgentName(id)} · {meta.title}</h2>
+              <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{displayName} · {displayTitle}</h2>
               <p className="text-xs flex items-center gap-1.5" style={{ color: 'var(--orange-400)' }}>
                 <span className="w-1.5 h-1.5 rounded-full status-dot-orange" style={{ background: 'var(--orange-500)' }} />
                 Connecté
@@ -122,6 +133,16 @@ export default function Agent() {
             </div>
           </div>
 
+          <Link
+            to={`/agent/${id}/config`}
+            className="p-2 rounded-lg transition-all"
+            style={{ color: 'var(--text-secondary)' }}
+            title="Configurer cet assistant"
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-elevated)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            <SlidersHorizontal className="w-5 h-5" />
+          </Link>
         </div>
       </div>
 
@@ -146,7 +167,7 @@ export default function Agent() {
                   <span className="typing-dot" />
                   <span className="typing-dot" />
                 </span>
-                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{getAgentShort(id)} réfléchit…</span>
+                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{shortName} réfléchit…</span>
               </div>
             </div>
           )}
@@ -188,10 +209,10 @@ export default function Agent() {
       <div className="shrink-0 px-6 py-2" style={{ borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)' }}>
         <div className="max-w-3xl mx-auto flex items-center gap-2 overflow-x-auto">
           <Wrench className="w-3 h-3 shrink-0" style={{ color: 'var(--text-muted)' }} />
-          {TOOLS_AVAILABLE.filter(t => meta.tools.includes(t.id)).map(t => (
+          {TOOLS_AVAILABLE.filter(t => agentTools.includes(t.id)).map(t => (
             <span key={t.id} className="tool-badge active">✅ {t.name}</span>
           ))}
-          {TOOLS_AVAILABLE.filter(t => !meta.tools.includes(t.id)).slice(0, 3).map(t => (
+          {TOOLS_AVAILABLE.filter(t => !agentTools.includes(t.id)).slice(0, 3).map(t => (
             <span key={t.id} className="tool-badge">⬜ {t.name}</span>
           ))}
         </div>
@@ -206,7 +227,7 @@ export default function Agent() {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSend()}
             disabled={isLoading}
-            placeholder={isLoading ? `${getAgentShort(id)} réfléchit…` : `Parle à ${getAgentShort(id)}...`}
+            placeholder={isLoading ? `${shortName} réfléchit…` : `Parle à ${shortName}...`}
             className="input-field flex-1"
             style={{ fontSize: 15 }}
           />

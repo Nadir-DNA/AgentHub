@@ -1,76 +1,32 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Settings, Bot, Calendar, TrendingUp, Zap } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { AGENT_META, getAllNames } from '../services/renames'
+import { useState, useEffect, useCallback } from 'react'
+import * as api from '../services/api'
+import type { Agent } from '../services/api'
 import AgentAvatar from '../components/AgentAvatar'
-
-// Vue locale du Hub (réécriture sur données Rust prévue au Lot 6).
-interface Agent {
-  id: string
-  name: string
-  type: 'manager' | 'commercial' | 'marketing' | 'judiciaire' | 'techdata'
-  status: 'active' | 'inactive'
-  profile: string
-}
 
 export default function Hub() {
   const navigate = useNavigate()
   const [agents, setAgents] = useState<Agent[]>([])
-  const [refresh, setRefresh] = useState(0)
+  const [usage, setUsage] = useState(0)
 
-  useEffect(() => {
-    const saved = localStorage.getItem('agenthub-config')
-    let activatedAgents = ['manager', 'commercial', 'marketing', 'judiciaire', 'techdata']
-
-    if (saved) {
-      try {
-        const config = JSON.parse(saved)
-        if (config.agents && config.agents.length > 0) {
-          activatedAgents = config.agents
-        }
-      } catch { /* ignore */ }
-    }
-
-    const names = getAllNames()
-
-    const agentList: Agent[] = activatedAgents.map(id => ({
-      id,
-      name: names[id] || id,
-      type: id as 'manager' | 'commercial' | 'marketing' | 'judiciaire' | 'techdata',
-      status: 'active',
-      profile: id,
-    }))
-
-    Object.keys(AGENT_META).forEach(id => {
-      if (!activatedAgents.includes(id)) {
-        agentList.push({
-          id,
-          name: names[id] || id,
-          type: id as 'manager' | 'commercial' | 'marketing' | 'judiciaire' | 'techdata',
-          status: 'inactive',
-          profile: id,
-        })
-      }
-    })
-
-    setAgents(agentList)
-  }, [refresh])
-
-  useEffect(() => {
-    const handler = () => setRefresh(n => n + 1)
-    window.addEventListener('agenthub-rename', handler)
-    window.addEventListener('storage', handler)
-    return () => {
-      window.removeEventListener('agenthub-rename', handler)
-      window.removeEventListener('storage', handler)
-    }
+  const load = useCallback(() => {
+    api.listAgents().then(setAgents).catch(() => setAgents([]))
+    api.getUsage().then(setUsage).catch(() => setUsage(0))
   }, [])
 
-  const handleAddAgent = () => {
-    navigate('/wizard')
-  }
+  useEffect(() => {
+    load()
+    const handler = () => load()
+    window.addEventListener('agenthub-agents-changed', handler)
+    window.addEventListener('agenthub-rename', handler)
+    return () => {
+      window.removeEventListener('agenthub-agents-changed', handler)
+      window.removeEventListener('agenthub-rename', handler)
+    }
+  }, [load])
 
-  const activeCount = agents.filter(a => a.status === 'active').length
+  const tasksCount = agents.reduce((n, a) => n + a.triggers.filter(t => t.enabled).length, 0)
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -101,21 +57,21 @@ export default function Hub() {
             <Bot className="w-4 h-4" style={{ color: 'var(--orange-400)' }} />
             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Assistants</span>
           </div>
-          <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{activeCount}<span className="text-sm font-normal" style={{ color: 'var(--text-muted)' }}>/{agents.length}</span></p>
+          <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{agents.length}</p>
         </div>
         <div className="stat-card" style={{ padding: '16px 20px' }}>
           <div className="flex items-center gap-2.5 mb-2">
             <Calendar className="w-4 h-4" style={{ color: 'var(--orange-400)' }} />
             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Tâches planifiées</span>
           </div>
-          <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{activeCount * 2}</p>
+          <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{tasksCount}</p>
         </div>
         <div className="stat-card" style={{ padding: '16px 20px' }}>
           <div className="flex items-center gap-2.5 mb-2">
             <TrendingUp className="w-4 h-4" style={{ color: 'var(--orange-400)' }} />
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Requêtes IA</span>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Requêtes IA (ce mois)</span>
           </div>
-          <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>0</p>
+          <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{usage}</p>
         </div>
       </div>
 
@@ -123,57 +79,37 @@ export default function Hub() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Vos assistants</h2>
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{activeCount} agents prêts</span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{agents.length} agents prêts</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {agents.map((agent) => {
-            const meta = AGENT_META[agent.id]
-            const isActive = agent.status === 'active'
-
-            return (
-              <Link
-                key={agent.id}
-                to={isActive ? `/agent/${agent.id}` : '#'}
-                className={`agent-card flex flex-col overflow-hidden ${
-                  !isActive ? 'opacity-30 hover:opacity-60' : ''
-                }`}
-                onClick={e => {
-                  if (!isActive) {
-                    e.preventDefault()
-                    handleAddAgent()
-                  }
-                }}
-              >
-                {/* Image — takes most of the card */}
-                <div className="flex-1 flex items-end justify-center" style={{ minHeight: 180 }}>
-                  <AgentAvatar id={agent.id} size={180} />
-                </div>
-
-                {/* Info bar at bottom */}
-                <div className="px-3 py-3" style={{ background: 'rgba(0,0,0,0.3)' }}>
-                  <h3 className="agent-name text-sm font-semibold truncate" style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                    {agent.name}
-                  </h3>
-                  <p className="text-[10px] uppercase tracking-wider mt-0.5" style={{ color: 'var(--orange-400)' }}>
-                    {meta?.title || ''}
-                  </p>
-                  <p className="text-[10px] mt-1 truncate" style={{ color: 'var(--text-muted)' }}>
-                    {meta?.desc || ''}
-                  </p>
-                </div>
-              </Link>
-            )
-          })}
+          {agents.map(agent => (
+            <Link
+              key={agent.id}
+              to={`/agent/${agent.id}`}
+              className="agent-card flex flex-col overflow-hidden"
+            >
+              <div className="flex-1 flex items-end justify-center" style={{ minHeight: 180 }}>
+                <AgentAvatar id={agent.role} size={180} />
+              </div>
+              <div className="px-3 py-3" style={{ background: 'rgba(0,0,0,0.3)' }}>
+                <h3 className="agent-name text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                  {agent.name}
+                </h3>
+                <p className="text-[10px] uppercase tracking-wider mt-0.5" style={{ color: 'var(--orange-400)' }}>
+                  {agent.title}
+                </p>
+                <p className="text-[10px] mt-1 truncate" style={{ color: 'var(--text-muted)' }}>
+                  {agent.tools.length} outil{agent.tools.length > 1 ? 's' : ''} · {agent.triggers.length} tâche{agent.triggers.length > 1 ? 's' : ''}
+                </p>
+              </div>
+            </Link>
+          ))}
 
           {/* Add agent */}
           <button
-            onClick={handleAddAgent}
+            onClick={() => navigate('/agent/new/config')}
             className="rounded-2xl flex flex-col items-center justify-center gap-2 transition-all"
-            style={{
-              background: 'transparent',
-              border: '2px dashed var(--border-subtle)',
-              minHeight: 240,
-            }}
+            style={{ background: 'transparent', border: '2px dashed var(--border-subtle)', minHeight: 240 }}
             onMouseEnter={e => {
               e.currentTarget.style.borderColor = 'rgba(255, 107, 0, 0.3)'
               e.currentTarget.style.background = 'var(--orange-glow)'
