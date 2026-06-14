@@ -1,41 +1,38 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, ArrowLeft, Zap, Key, CheckCircle } from 'lucide-react'
-
-const METIERS = [
-  { id: 'avocat', label: 'Avocat', icon: '⚖️' },
-  { id: 'coiffure', label: 'Coiffure', icon: '💇' },
-  { id: 'garage', label: 'Garage', icon: '🔧' },
-  { id: 'restaurant', label: 'Restaurant', icon: '🍽️' },
-  { id: 'medical', label: 'Médical', icon: '🏥' },
-  { id: 'autre', label: 'Autre', icon: '💼' },
-]
-
-const AGENTS = [
-  { id: 'manager', label: 'Manager', desc: 'Direction, stratégie, décisions', icon: '🛡️' },
-  { id: 'commercial', label: 'Commercial', desc: 'Prospection, deals, relances', icon: '💼' },
-  { id: 'marketing', label: 'Marketing', desc: 'Contenu, réseaux, visibilité', icon: '🥷' },
-  { id: 'judiciaire', label: 'Judiciaire', desc: 'Contrats, conformité, RGPD', icon: '⚖️' },
-  { id: 'techdata', label: 'Tech & Data', desc: 'Tech, données, automatisation', icon: '🚀' },
-]
+import { ArrowRight, ArrowLeft, Zap, Key, CheckCircle, Users } from 'lucide-react'
+import * as api from '../services/api'
+import type { PackInfo } from '../services/api'
 
 export default function Wizard() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
+  const [packs, setPacks] = useState<PackInfo[]>([])
   const [metier, setMetier] = useState('')
-  const [agents, setAgents] = useState<string[]>(['manager'])
   const [apiKey, setApiKey] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const toggleAgent = (id: string) => {
-    setAgents(prev =>
-      prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
-    )
-  }
+  useEffect(() => {
+    api.listPacks().then(setPacks).catch(() => setPacks([]))
+  }, [])
 
-  const handleFinish = () => {
-    const config = { metier, agents, apiKey, installed: true }
-    localStorage.setItem('agenthub-config', JSON.stringify(config))
-    navigate('/')
+  const selectedPack = packs.find(p => p.id === metier)
+
+  const finish = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await api.applyPack(metier)
+      if (apiKey.trim()) await api.setApiKey(apiKey.trim())
+      const cfg = await api.getConfig()
+      await api.saveConfig({ ...cfg, installed: true })
+      navigate('/')
+    } catch (e) {
+      setError(typeof e === 'string' ? e : 'Une erreur est survenue.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -60,30 +57,30 @@ export default function Wizard() {
             </div>
             <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Bienvenue sur AgentHub</h1>
             <p className="text-lg mb-10" style={{ color: 'var(--text-muted)' }}>
-              Vos assistants IA professionnels, installés sur votre poste.
+              Votre équipe d'assistants IA, installée sur votre poste, configurée pour votre métier.
             </p>
             <button onClick={() => setStep(2)} className="btn-primary inline-flex items-center gap-2 text-lg px-10 py-4">
-              Commencer
-              <ArrowRight className="w-5 h-5" />
+              Commencer <ArrowRight className="w-5 h-5" />
             </button>
           </div>
         )}
 
-        {/* Step 2: Métier */}
+        {/* Step 2: Métier (pack) */}
         {step === 2 && (
           <div>
             <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Quel est votre métier ?</h2>
-            <p className="mb-8" style={{ color: 'var(--text-muted)' }}>Cela nous aide à personnaliser vos assistants.</p>
+            <p className="mb-8" style={{ color: 'var(--text-muted)' }}>On configure votre équipe d'assistants en conséquence.</p>
 
             <div className="grid grid-cols-2 gap-4 mb-10">
-              {METIERS.map(m => (
+              {packs.map(p => (
                 <button
-                  key={m.id}
-                  onClick={() => setMetier(m.id)}
-                  className={`wizard-card text-left ${metier === m.id ? 'selected' : ''}`}
+                  key={p.id}
+                  onClick={() => setMetier(p.id)}
+                  className={`wizard-card text-left ${metier === p.id ? 'selected' : ''}`}
                 >
-                  <div className="text-3xl mb-2">{m.icon}</div>
-                  <div className="font-semibold" style={{ color: metier === m.id ? 'var(--orange-300)' : 'var(--text-primary)' }}>{m.label}</div>
+                  <div className="text-3xl mb-2">{p.icon}</div>
+                  <div className="font-semibold" style={{ color: metier === p.id ? 'var(--orange-300)' : 'var(--text-primary)' }}>{p.label}</div>
+                  <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{p.description}</div>
                 </button>
               ))}
             </div>
@@ -99,40 +96,30 @@ export default function Wizard() {
           </div>
         )}
 
-        {/* Step 3: Agents */}
-        {step === 3 && (
+        {/* Step 3: Pack preview */}
+        {step === 3 && selectedPack && (
           <div>
-            <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Choisissez vos assistants</h2>
-            <p className="mb-8" style={{ color: 'var(--text-muted)' }}>Vous pourrez en ajouter d'autres plus tard.</p>
+            <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Votre équipe est prête</h2>
+            <p className="mb-8" style={{ color: 'var(--text-muted)' }}>Vous pourrez tout personnaliser ensuite (noms, prompts, outils, tâches).</p>
 
-            <div className="space-y-3 mb-10">
-              {AGENTS.map(agent => (
-                <button
-                  key={agent.id}
-                  onClick={() => toggleAgent(agent.id)}
-                  className={`wizard-card w-full text-left ${agents.includes(agent.id) ? 'selected' : ''}`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className="text-3xl">{agent.icon}</div>
-                      <div>
-                        <h3 className="font-semibold" style={{ color: agents.includes(agent.id) ? 'var(--orange-300)' : 'var(--text-primary)' }}>{agent.label}</h3>
-                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{agent.desc}</p>
-                      </div>
-                    </div>
-                    {agents.includes(agent.id) && (
-                      <CheckCircle className="w-5 h-5 shrink-0" style={{ color: 'var(--orange-500)' }} />
-                    )}
-                  </div>
-                </button>
-              ))}
+            <div className="settings-section mb-10">
+              <div className="flex items-center gap-4">
+                <div className="text-5xl">{selectedPack.icon}</div>
+                <div>
+                  <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{selectedPack.label}</h3>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{selectedPack.description}</p>
+                  <p className="text-sm mt-2 inline-flex items-center gap-1.5" style={{ color: 'var(--orange-300)' }}>
+                    <Users className="w-4 h-4" /> {selectedPack.agent_count} assistants inclus
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-between">
               <button onClick={() => setStep(2)} className="btn-secondary inline-flex items-center gap-2">
                 <ArrowLeft className="w-5 h-5" /> Retour
               </button>
-              <button onClick={() => setStep(4)} disabled={agents.length === 0} className="btn-primary inline-flex items-center gap-2">
+              <button onClick={() => setStep(4)} className="btn-primary inline-flex items-center gap-2">
                 Continuer <ArrowRight className="w-5 h-5" />
               </button>
             </div>
@@ -144,18 +131,18 @@ export default function Wizard() {
           <div>
             <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Votre clé OpenCode Go</h2>
             <p className="mb-8" style={{ color: 'var(--text-muted)' }}>
-              AgentHub utilise votre propre clé API pour fonctionner.
+              AgentHub utilise votre propre clé API. Vous pouvez aussi l'ajouter plus tard dans les Paramètres.
             </p>
 
             <div className="mb-10">
-              <label className="block text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Clé API</label>
+              <label className="block text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Clé API (optionnel)</label>
               <div className="relative">
                 <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--text-muted)' }} />
                 <input
                   type="password"
                   value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="***"
+                  onChange={e => setApiKey(e.target.value)}
+                  placeholder="sk-…"
                   className="input-field"
                   style={{ paddingLeft: 48 }}
                 />
@@ -166,14 +153,15 @@ export default function Wizard() {
                   opencode.ai/auth
                 </a>
               </p>
+              {error && <p className="text-sm mt-3" style={{ color: '#fca5a5' }}>⚠️ {error}</p>}
             </div>
 
             <div className="flex justify-between">
-              <button onClick={() => setStep(3)} className="btn-secondary inline-flex items-center gap-2">
+              <button onClick={() => setStep(3)} className="btn-secondary inline-flex items-center gap-2" disabled={busy}>
                 <ArrowLeft className="w-5 h-5" /> Retour
               </button>
-              <button onClick={handleFinish} className="btn-primary inline-flex items-center gap-2">
-                Terminer l'installation <CheckCircle className="w-5 h-5" />
+              <button onClick={finish} disabled={busy} className="btn-primary inline-flex items-center gap-2">
+                {busy ? 'Installation…' : "Terminer l'installation"} <CheckCircle className="w-5 h-5" />
               </button>
             </div>
           </div>

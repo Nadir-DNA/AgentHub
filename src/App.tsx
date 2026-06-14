@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import * as api from './services/api'
 import Layout from './components/Layout'
 import Hub from './pages/Hub'
 import Agent from './pages/Agent'
@@ -23,19 +25,23 @@ function App() {
 }
 
 function RootRedirect() {
-  // Lecture synchrone du localStorage — pas d'état React, pas de stale state
-  const saved = localStorage.getItem('agenthub-config')
-  if (saved) {
-    try {
-      const config = JSON.parse(saved)
-      if (config.installed) {
-        return <Hub />
-      }
-    } catch {
-      // Ignorer
-    }
+  // La source de vérité est la config Rust (plus le localStorage).
+  const [view, setView] = useState<'loading' | 'hub' | 'wizard'>('loading')
+
+  useEffect(() => {
+    api
+      .getConfig()
+      .then(c => setView(c.installed ? 'hub' : 'wizard'))
+      .catch(() => setView('wizard'))
+  }, [])
+
+  if (view === 'loading') {
+    return <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }} />
   }
-  return <Navigate to="/wizard" replace />
+  if (view === 'wizard') {
+    return <Navigate to="/wizard" replace />
+  }
+  return <Hub />
 }
 
 export default App
