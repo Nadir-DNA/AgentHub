@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Settings, Bot, Calendar, TrendingUp, Zap, Sparkles, Send } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
+import { listen } from '@tauri-apps/api/event'
 import * as api from '../services/api'
 import type { Agent } from '../services/api'
 import AgentAvatar from '../components/AgentAvatar'
@@ -23,9 +24,12 @@ export default function Hub() {
     const handler = () => load()
     window.addEventListener('agenthub-agents-changed', handler)
     window.addEventListener('agenthub-rename', handler)
+    // Rafraîchit quand une tâche planifiée se termine (scheduler Rust).
+    const unlisten = listen('agent-task-done', () => load())
     return () => {
       window.removeEventListener('agenthub-agents-changed', handler)
       window.removeEventListener('agenthub-rename', handler)
+      unlisten.then(f => f())
     }
   }, [load])
 

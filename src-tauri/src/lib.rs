@@ -5,6 +5,7 @@ mod llm;
 mod models;
 mod orchestrator;
 mod packs;
+mod scheduler;
 mod state;
 mod store;
 
@@ -38,6 +39,14 @@ pub fn run() {
             }
             let conn = open_db(app);
             app.manage(AppState::new(conn));
+
+            // Démarre le scheduler des tâches planifiées en arrière-plan.
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = scheduler::start(handle).await {
+                    log::warn!("Scheduler non démarré : {e}");
+                }
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

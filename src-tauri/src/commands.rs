@@ -112,7 +112,7 @@ fn new_id() -> String {
 /// Cœur d'un tour de conversation, réutilisé par `send_message` et `ask_hub`.
 /// Persiste le message user, appelle le LLM, persiste la réponse + usage.
 /// Le MutexGuard est toujours libéré avant le `await` (future Send-safe).
-async fn agent_turn(state: &AppState, agent_id: &str, content: String) -> CmdResult<Message> {
+pub(crate) async fn agent_turn(state: &AppState, agent_id: &str, content: String) -> CmdResult<Message> {
     // Phase 1 (sync) : lecture + persistance du message user.
     let (api_key, model, turns) = {
         let conn = state.db.lock().map_err(map)?;

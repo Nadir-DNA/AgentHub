@@ -1,50 +1,81 @@
-import { Link } from 'react-router-dom'
-import { ArrowLeft, Key, Cpu, User, Check, X, Pencil } from 'lucide-react'
-import { useState } from 'react'
-import { getAgentName, renameAgent, AGENT_META } from '../services/renames'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Key, Cpu, User, Check, Trash2, SlidersHorizontal } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import * as api from '../services/api'
+import type { AppConfig, Agent } from '../services/api'
 import AgentAvatar from '../components/AgentAvatar'
 
-const AGENT_IDS = ['manager', 'commercial', 'marketing', 'judiciaire', 'techdata']
+const MODELS = [
+  { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash — rapide & économique' },
+  { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro — plus précis' },
+  { id: 'glm-5.1', label: 'GLM 5.1 — équilibré' },
+  { id: 'kimi-k2.7', label: 'Kimi K2.7' },
+  { id: 'mimo-v2.5-pro', label: 'MiMo V2.5 Pro' },
+]
 
 export default function Settings() {
-  const [usage] = useState({ current: 342, limit: 5000 })
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editValue, setEditValue] = useState('')
-  const [, forceUpdate] = useState(0)
+  const navigate = useNavigate()
+  const [config, setConfig] = useState<AppConfig | null>(null)
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [usage, setUsage] = useState(0)
+  const [keyInput, setKeyInput] = useState('')
+  const [savedFlash, setSavedFlash] = useState(false)
 
-  const usagePercent = (usage.current / usage.limit) * 100
+  const reload = useCallback(() => {
+    api.getConfig().then(setConfig).catch(() => {})
+    api.getUsage().then(setUsage).catch(() => {})
+    api.listAgents().then(setAgents).catch(() => {})
+  }, [])
 
-  const commitRename = (id: string) => {
-    renameAgent(id, editValue)
-    setEditingId(null)
-    forceUpdate(n => n + 1)
-    window.dispatchEvent(new CustomEvent('agenthub-rename'))
+  useEffect(() => { reload() }, [reload])
+
+  if (!config) {
+    return <div className="p-8 text-center" style={{ color: 'var(--text-muted)' }}>Chargement…</div>
   }
 
-  const startEdit = (id: string) => {
-    setEditingId(id)
-    setEditValue(getAgentName(id))
+  const patchConfig = async (p: Partial<AppConfig>) => {
+    const next = { ...config, ...p }
+    setConfig(next)
+    await api.saveConfig(next)
+    setSavedFlash(true)
+    setTimeout(() => setSavedFlash(false), 1500)
   }
 
-  const cancelEdit = () => {
-    setEditingId(null)
-    setEditValue('')
+  const saveKey = async () => {
+    const k = keyInput.trim()
+    if (!k) return
+    await api.setApiKey(k)
+    setKeyInput('')
+    reload()
+  }
+
+  const removeKey = async () => {
+    await api.clearApiKey()
+    reload()
+  }
+
+  const disconnect = async () => {
+    if (!confirm('Se déconnecter ? La clé API sera supprimée et vous reverrez l\'onboarding.')) return
+    await api.clearApiKey()
+    await api.saveConfig({ ...config, installed: false })
+    navigate('/wizard')
   }
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <Link
-          to="/"
-          className="p-2 rounded-lg transition-all"
-          style={{ color: 'var(--text-secondary)' }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Paramètres</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <Link to="/" className="p-2 rounded-lg" style={{ color: 'var(--text-secondary)' }}>
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Paramètres</h1>
+        </div>
+        {savedFlash && (
+          <span className="text-xs inline-flex items-center gap-1" style={{ color: 'var(--orange-300)' }}>
+            <Check className="w-3.5 h-3.5" /> Enregistré
+          </span>
+        )}
       </div>
 
       <div className="space-y-5">
@@ -54,24 +85,16 @@ export default function Settings() {
             <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'var(--orange-glow)' }}>
               <Cpu className="w-5 h-5" style={{ color: 'var(--orange-400)' }} />
             </div>
-            <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Assistant IA</h2>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Modèle IA</h2>
           </div>
-
           <label className="block text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Modèle utilisé</label>
-          <select className="input-field mb-5">
-            <option>DeepSeek V4 — recommandé</option>
-            <option>GPT-4o mini (plus rapide, moins précis)</option>
-            <option>Claude Haiku (équilibré)</option>
-            <option>Gemini Flash (économique)</option>
+          <select
+            className="input-field"
+            value={config.model}
+            onChange={e => patchConfig({ model: e.target.value })}
+          >
+            {MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
           </select>
-
-          <div className="flex items-center justify-between pt-5" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-            <div>
-              <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Version installée</p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>1.0.0 — Dernière : 1.0.0 ✅</p>
-            </div>
-            <button className="btn-secondary text-sm">🔄 Vérifier les mises à jour</button>
-          </div>
         </div>
 
         {/* API key */}
@@ -80,109 +103,73 @@ export default function Settings() {
             <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'var(--orange-glow)' }}>
               <Key className="w-5 h-5" style={{ color: 'var(--orange-400)' }} />
             </div>
-            <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Abonnement OpenCode Go</h2>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Clé API OpenCode Go</h2>
           </div>
 
-          <label className="block text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Clé API</label>
-          <div className="flex gap-2 mb-5">
+          <div className="flex items-center justify-between text-sm mb-4">
+            <span style={{ color: 'var(--text-muted)' }}>Statut</span>
+            {config.has_api_key ? (
+              <span className="font-semibold inline-flex items-center gap-1" style={{ color: 'var(--orange-300)' }}>
+                <Check className="w-4 h-4" /> Configurée
+              </span>
+            ) : (
+              <span className="font-semibold" style={{ color: '#fca5a5' }}>Aucune clé</span>
+            )}
+          </div>
+
+          <label className="block text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
+            {config.has_api_key ? 'Remplacer la clé' : 'Ajouter votre clé'}
+          </label>
+          <div className="flex gap-2">
             <input
               type="password"
-              defaultValue="sk-xxxx...xxxx"
-              readOnly
+              value={keyInput}
+              onChange={e => setKeyInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && saveKey()}
+              placeholder="sk-…"
               className="input-field flex-1"
             />
-            <button className="btn-secondary text-sm">Modifier</button>
+            <button onClick={saveKey} disabled={!keyInput.trim()} className="btn-primary text-sm">Enregistrer</button>
+            {config.has_api_key && (
+              <button onClick={removeKey} className="btn-secondary text-sm">Supprimer</button>
+            )}
           </div>
+          <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+            La clé est stockée localement, hors du navigateur. Obtenez-la sur{' '}
+            <a href="https://opencode.ai/auth" target="_blank" rel="noreferrer" style={{ color: 'var(--orange-400)' }}>opencode.ai/auth</a>.
+          </p>
 
-          <div className="space-y-3 mb-5">
-            <div className="flex items-center justify-between text-sm">
-              <span style={{ color: 'var(--text-muted)' }}>Statut</span>
-              <span style={{ color: 'var(--orange-300)' }} className="font-semibold">✅ Active</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span style={{ color: 'var(--text-muted)' }}>Utilisation ce mois</span>
-              <span style={{ color: 'var(--text-primary)' }} className="font-semibold">{usage.current} / {usage.limit} requêtes</span>
-            </div>
+          <div className="flex items-center justify-between text-sm mt-5 pt-5" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+            <span style={{ color: 'var(--text-muted)' }}>Requêtes ce mois</span>
+            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{usage}</span>
           </div>
-
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${usagePercent}%` }} />
-          </div>
-          <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{usagePercent.toFixed(1)}% utilisé</p>
         </div>
 
-        {/* Agents list */}
+        {/* Agents */}
         <div className="settings-section">
-          <h2 className="text-lg font-semibold mb-5" style={{ color: 'var(--text-primary)' }}>Tes assistants</h2>
+          <h2 className="text-lg font-semibold mb-5" style={{ color: 'var(--text-primary)' }}>Vos assistants</h2>
           <div className="space-y-3">
-            {AGENT_IDS.map((id) => {
-              const meta = AGENT_META[id]
-              const currentName = getAgentName(id)
-              const isEditing = editingId === id
-
-              return (
-                <div
-                  key={id}
-                  className="p-4 rounded-xl flex items-center justify-between"
-                  style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <AgentAvatar id={id} size={40} />
-                    <div className="min-w-0">
-                      {isEditing ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={e => setEditValue(e.target.value)}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') commitRename(id)
-                              if (e.key === 'Escape') cancelEdit()
-                            }}
-                            autoFocus
-                            className="input-field text-sm"
-                            style={{ width: 192, padding: '8px 12px' }}
-                            placeholder={meta?.short || id}
-                          />
-                          <button
-                            onClick={() => commitRename(id)}
-                            className="p-1.5 rounded-lg transition"
-                            style={{ background: 'rgba(255, 107, 0, 0.2)' }}
-                            title="Valider"
-                          >
-                            <Check className="w-4 h-4" style={{ color: 'var(--orange-400)' }} />
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="p-1.5 rounded-lg transition"
-                            style={{ background: 'var(--bg-elevated)' }}
-                            title="Annuler"
-                          >
-                            <X className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{currentName}</p>
-                          <button
-                            onClick={() => startEdit(id)}
-                            className="p-1 rounded-lg transition"
-                            style={{ color: 'var(--text-muted)' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                            title="Renommer"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{meta?.desc || ''}</p>
-                    </div>
+            {agents.map(a => (
+              <div
+                key={a.id}
+                className="p-4 rounded-xl flex items-center justify-between"
+                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <AgentAvatar id={a.role} size={40} />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{a.name}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{a.title}</p>
                   </div>
-                  <span className="text-xs font-semibold shrink-0 ml-3" style={{ color: 'var(--orange-300)' }}>● Actif</span>
                 </div>
-              )
-            })}
+                <Link
+                  to={`/agent/${a.id}/config`}
+                  className="btn-secondary text-sm inline-flex items-center gap-1.5 shrink-0"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" /> Configurer
+                </Link>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -198,32 +185,40 @@ export default function Settings() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Prénom</label>
-              <input type="text" placeholder="Gérard" className="input-field" />
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Métier</label>
-              <select className="input-field">
-                <option>Coiffeur</option>
-                <option>Avocat</option>
-                <option>Garagiste</option>
-                <option>Esthéticienne</option>
-                <option>Autre</option>
-              </select>
+              <input
+                type="text"
+                value={config.user_name ?? ''}
+                onChange={e => setConfig({ ...config, user_name: e.target.value })}
+                onBlur={e => patchConfig({ user_name: e.target.value })}
+                placeholder="Gérard"
+                className="input-field"
+              />
             </div>
             <div>
               <label className="block text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Email</label>
-              <input type="email" placeholder="gerard@salon.fr" className="input-field" />
+              <input
+                type="email"
+                value={config.user_email ?? ''}
+                onChange={e => setConfig({ ...config, user_email: e.target.value })}
+                onBlur={e => patchConfig({ user_email: e.target.value })}
+                placeholder="gerard@salon.fr"
+                className="input-field"
+              />
             </div>
+            {config.metier && (
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Pack métier : <span style={{ color: 'var(--orange-300)' }}>{config.metier}</span>
+              </p>
+            )}
           </div>
 
-          <div className="flex gap-3 mt-6">
-            <button className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all" style={{ background: 'rgba(220, 38, 38, 0.15)', border: '1px solid rgba(220, 38, 38, 0.2)', color: '#fca5a5' }}>
-              Déconnecter
-            </button>
-            <button className="flex-1 btn-primary text-sm">
-              Sauvegarder
-            </button>
-          </div>
+          <button
+            onClick={disconnect}
+            className="w-full mt-6 py-3 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2"
+            style={{ background: 'rgba(220, 38, 38, 0.15)', border: '1px solid rgba(220, 38, 38, 0.2)', color: '#fca5a5' }}
+          >
+            <Trash2 className="w-4 h-4" /> Se déconnecter
+          </button>
         </div>
       </div>
     </div>
