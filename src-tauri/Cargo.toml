@@ -1,6 +1,6 @@
 [package]
 name = "agenthub"
-version = "1.0.0"
+version = "2.0.0"
 description = "AgentHub — Assistant IA professionnel pour TPE/PME"
 authors = ["Nadir DAOUDI"]
 license = "Proprietary"
@@ -21,3 +21,8 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.11.2", features = [] }
 tauri-plugin-log = "2"
+rusqlite = { version = "0.32", features = ["bundled"] }
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["clock"] }
+anyhow = "1"
+thiserror = "2"
