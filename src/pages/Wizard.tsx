@@ -36,7 +36,7 @@ export default function Wizard() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: 'var(--bg-primary)' }}>
+    <div className="min-h-screen flex items-center justify-center p-8" style={{ position: 'relative', zIndex: 1 }}>
       <div className="max-w-2xl w-full">
         {/* Progress bar */}
         <div className="mb-10">

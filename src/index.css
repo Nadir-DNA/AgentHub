@@ -1,25 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #111111;
-  --bg-card: #161616;
-  --bg-elevated: #1a1a1a;
-  --border-subtle: #222222;
-  --border-hover: #333333;
-  --text-primary: #f0f0f0;
-  --text-secondary: #888888;
-  --text-muted: #555555;
+  /* Neutres (légèrement chauds) */
+  --bg-primary: #0b0a0c;
+  --bg-secondary: #141316;
+  --bg-card: #17161a;
+  --bg-elevated: #1e1d22;
+  --border-subtle: #262329;
+  --border-hover: #38343d;
+  --text-primary: #f4f2f5;
+  --text-secondary: #9a949f;
+  --text-muted: #635d68;
+
+  /* Marque orange */
   --orange-500: #ff6b00;
-  --orange-400: #ff8c00;
-  --orange-300: #ffaa33;
+  --orange-400: #ff8c1a;
+  --orange-300: #ffb24d;
   --orange-glow: rgba(255, 107, 0, 0.15);
-  --orange-glow-strong: rgba(255, 107, 0, 0.3);
+  --orange-glow-strong: rgba(255, 107, 0, 0.32);
+
+  /* Accents par rôle (halo des cartes) */
+  --accent: var(--orange-500);
+  --role-manager: #4f8cff;
+  --role-commercial: #ff7a3c;
+  --role-marketing: #b15cff;
+  --role-judiciaire: #f2c14e;
+  --role-techdata: #2dd4bf;
+
+  /* Rayons & ombres */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 26px;
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --shadow-lift: 0 24px 70px rgba(0, 0, 0, 0.55);
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body {
   margin: 0;
@@ -33,94 +50,169 @@ html, body {
   font-weight: 400;
 }
 
-body {
-  min-width: 320px;
-  min-height: 100vh;
+body { min-width: 320px; min-height: 100vh; }
+
+/* ===== Aurora de fond (ambiance premium, perf CSS pure) ===== */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60vw 50vh at 18% -8%, rgba(255, 107, 0, 0.10), transparent 60%),
+    radial-gradient(55vw 45vh at 92% 0%, rgba(177, 92, 255, 0.07), transparent 60%),
+    radial-gradient(70vw 60vh at 50% 115%, rgba(79, 140, 255, 0.06), transparent 60%);
+  animation: aurora-drift 26s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(0, -2%, 0) scale(1.06); }
+}
+
+#root { position: relative; z-index: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+  .avatar-layer, .agent-card, .btn-primary { transition: none !important; }
 }
 
 /* ===== Scrollbar ===== */
-::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #444; }
+::-webkit-scrollbar-thumb { background: #322e37; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #45404c; }
 
-/* ===== Agent Card — Hub ===== */
-.agent-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 20px;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+/* ===== Avatar (2 couches, swap au hover) ===== */
+.avatar {
   position: relative;
-  overflow: hidden;
+  pointer-events: none;
+}
+.avatar-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  transition: opacity 0.45s ease, transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1),
+    filter 0.45s ease;
+  -webkit-user-drag: none;
+}
+.avatar-active { opacity: 0; }
+
+/* swap : survol direct de l'avatar OU de la carte parente */
+.avatar:hover .avatar-active,
+.agent-card:hover .avatar-active { opacity: 1; }
+.avatar:hover .avatar-rest,
+.agent-card:hover .avatar-rest { opacity: 0; }
+
+.agent-card:hover .avatar-active {
+  transform: translateY(-4px) scale(1.06);
+  filter: drop-shadow(0 14px 26px rgba(255, 107, 0, 0.35));
 }
 
+/* ===== Carte d'agent — Hub ===== */
+.agent-card {
+  --accent: var(--orange-500);
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 30%),
+    linear-gradient(180deg, var(--bg-card), #121116);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.4s ease,
+    border-color 0.4s ease;
+  transform-style: preserve-3d;
+}
+
+/* halo radial coloré derrière l'avatar */
 .agent-card::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(ellipse at 50% 0%, var(--orange-glow) 0%, transparent 70%);
-  opacity: 0;
+  background: radial-gradient(70% 55% at 50% 18%,
+    color-mix(in srgb, var(--accent) 26%, transparent) 0%, transparent 70%);
+  opacity: 0.35;
   transition: opacity 0.4s ease;
   pointer-events: none;
 }
 
+/* liseré supérieur accent */
+.agent-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 18%; right: 18%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
 .agent-card:hover {
-  transform: translateY(-6px);
-  border-color: var(--border-hover);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px var(--orange-glow);
+  transform: translateY(-8px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
+  box-shadow: var(--shadow-lift),
+    0 0 50px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.agent-card:hover::before { opacity: 0.85; }
+.agent-card:hover::after { opacity: 1; }
+.agent-card:hover .agent-name { color: var(--accent); }
+
+/* barre d'info en bas de carte (glass) */
+.agent-card-info {
+  position: relative;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.55) 40%);
+  backdrop-filter: blur(6px);
 }
 
-.agent-card:hover::before {
-  opacity: 1;
+/* ===== Carte "ajouter" ===== */
+.add-card {
+  border: 1.5px dashed var(--border-hover);
+  border-radius: var(--r-xl);
+  transition: all 0.3s ease;
+}
+.add-card:hover {
+  border-color: var(--orange-500);
+  background: var(--orange-glow);
+  transform: translateY(-4px);
 }
 
-/* Agent avatar hover */
-.agent-card:hover .agent-avatar-img {
-  transform: scale(1.08);
-}
-
-.agent-card:hover .agent-name {
-  color: var(--orange-400);
-}
-
-/* Status dot pulse */
+/* ===== Status dot ===== */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.4); }
-  50% { box-shadow: 0 0 8px 2px rgba(255, 107, 0, 0.2); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.45); }
+  50% { box-shadow: 0 0 10px 2px rgba(255, 107, 0, 0.25); }
 }
-
-.status-dot-orange {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
+.status-dot-orange { animation: pulse-glow 2s ease-in-out infinite; }
 
 /* ===== Stat cards ===== */
 .stat-card {
-  background: var(--bg-card);
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent), var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  padding: 24px;
-  transition: border-color 0.3s ease;
+  border-radius: var(--r-lg);
+  padding: 18px 22px;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+  overflow: hidden;
 }
-
-.stat-card:hover {
-  border-color: var(--border-hover);
-}
+.stat-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
 
 /* ===== Chat bubbles ===== */
 .msg-user {
   background: linear-gradient(135deg, var(--orange-500), #e65c00);
   color: white;
   border-radius: 20px 20px 4px 20px;
+  box-shadow: 0 6px 22px rgba(255, 107, 0, 0.22);
 }
-
 .msg-assistant {
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
   border-radius: 20px 20px 20px 4px;
 }
-
 .msg-error {
   background: rgba(220, 38, 38, 0.1);
   border: 1px solid rgba(220, 38, 38, 0.2);
@@ -128,197 +220,179 @@ body {
   border-radius: 20px 20px 20px 4px;
 }
 
-/* ===== Typing indicator ===== */
+/* ===== Typing ===== */
 @keyframes typing-bounce {
   0%, 60%, 100% { transform: translateY(0); }
   30% { transform: translateY(-6px); }
 }
-
-.typing-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--orange-400);
-  display: inline-block;
-}
-
+.typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange-400); display: inline-block; }
 .typing-dot:nth-child(1) { animation: typing-bounce 1.4s infinite 0ms; }
 .typing-dot:nth-child(2) { animation: typing-bounce 1.4s infinite 200ms; }
 .typing-dot:nth-child(3) { animation: typing-bounce 1.4s infinite 400ms; }
 
-/* ===== Quick action pills ===== */
+/* ===== Quick actions ===== */
 .quick-action {
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: 100px;
-  padding: 10px 20px;
+  padding: 10px 18px;
   font-size: 13px;
   color: var(--text-secondary);
   transition: all 0.25s ease;
   cursor: pointer;
   white-space: nowrap;
 }
-
 .quick-action:hover {
   background: var(--orange-glow);
   border-color: var(--orange-500);
   color: var(--orange-300);
+  transform: translateY(-1px);
 }
 
 /* ===== Wizard ===== */
 .wizard-card {
-  background: var(--bg-card);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent), var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  padding: 24px;
+  border-radius: var(--r-md);
+  padding: 22px;
   transition: all 0.3s ease;
   cursor: pointer;
 }
-
-.wizard-card:hover {
-  border-color: var(--border-hover);
-}
-
+.wizard-card:hover { border-color: var(--border-hover); transform: translateY(-3px); }
 .wizard-card.selected {
   border-color: var(--orange-500);
   background: var(--orange-glow);
-  box-shadow: 0 0 20px var(--orange-glow);
+  box-shadow: 0 0 24px var(--orange-glow), inset 0 0 0 1px rgba(255,107,0,0.25);
 }
 
 /* ===== Settings ===== */
 .settings-section {
-  background: var(--bg-card);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent), var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  padding: 28px;
+  border-radius: var(--r-lg);
+  padding: 26px;
 }
 
-/* ===== Input field ===== */
+/* ===== Inputs ===== */
 .input-field {
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   color: var(--text-primary);
-  padding: 14px 18px;
+  padding: 13px 16px;
   font-size: 15px;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
   outline: none;
   width: 100%;
 }
-
 .input-field:focus {
   border-color: var(--orange-500);
   box-shadow: 0 0 0 3px var(--orange-glow);
+  background: #18171b;
 }
+.input-field::placeholder { color: var(--text-muted); }
+select.input-field { cursor: pointer; }
 
-.input-field::placeholder {
-  color: var(--text-muted);
-}
-
-/* ===== Button primary ===== */
+/* ===== Buttons ===== */
 .btn-primary {
+  position: relative;
   background: linear-gradient(135deg, var(--orange-500), #e65c00);
   color: white;
   border: none;
-  border-radius: 12px;
-  padding: 14px 28px;
+  border-radius: var(--r-sm);
+  padding: 13px 26px;
   font-weight: 600;
   font-size: 15px;
   cursor: pointer;
   transition: all 0.25s ease;
-  box-shadow: 0 4px 20px rgba(255, 107, 0, 0.3);
+  box-shadow: 0 6px 22px rgba(255, 107, 0, 0.30);
+  overflow: hidden;
 }
-
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 30px rgba(255, 107, 0, 0.4);
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.25) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
 }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 34px rgba(255, 107, 0, 0.42); }
+.btn-primary:hover::after { transform: translateX(120%); }
+.btn-primary:disabled { background: #2a282d; color: #6b6670; box-shadow: none; cursor: not-allowed; transform: none; }
+.btn-primary:disabled::after { display: none; }
 
-.btn-primary:disabled {
-  background: #333;
-  box-shadow: none;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* ===== Button secondary ===== */
 .btn-secondary {
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  padding: 14px 28px;
+  border-radius: var(--r-sm);
+  padding: 13px 24px;
   color: var(--text-secondary);
   font-weight: 500;
   font-size: 15px;
   cursor: pointer;
   transition: all 0.25s ease;
 }
+.btn-secondary:hover { border-color: var(--border-hover); color: var(--text-primary); background: var(--bg-card); }
 
-.btn-secondary:hover {
-  border-color: var(--border-hover);
-  color: var(--text-primary);
-  background: var(--bg-card);
-}
-
-/* ===== Progress bar ===== */
-.progress-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--bg-secondary);
-  overflow: hidden;
-}
-
+/* ===== Progress ===== */
+.progress-bar { height: 6px; border-radius: 3px; background: var(--bg-secondary); overflow: hidden; }
 .progress-fill {
-  height: 100%;
-  border-radius: 3px;
+  height: 100%; border-radius: 3px;
   background: linear-gradient(90deg, var(--orange-500), var(--orange-300));
+  box-shadow: 0 0 12px var(--orange-glow-strong);
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ===== Header bar ===== */
+/* ===== Header ===== */
 .header-bar {
-  background: rgba(10, 10, 10, 0.85);
+  background: rgba(11, 10, 12, 0.8);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-subtle);
 }
 
-/* ===== Tool badge ===== */
+/* ===== Badges ===== */
 .tool-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; font-size: 12px;
+  background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary);
 }
-
-.tool-badge.active {
-  border-color: rgba(255, 107, 0, 0.3);
-  color: var(--orange-300);
-  background: var(--orange-glow);
-}
-
-/* ===== Cron badge ===== */
+.tool-badge.active { border-color: rgba(255, 107, 0, 0.3); color: var(--orange-300); background: var(--orange-glow); }
 .cron-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; font-size: 12px;
+  background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary); white-space: nowrap;
 }
 
-/* ===== Glass panel ===== */
+/* ===== Glass ===== */
 .glass-panel {
-  background: rgba(22, 22, 22, 0.7);
+  background: rgba(23, 22, 26, 0.7);
   backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
-  border-radius: 16px;
+  border-radius: var(--r-lg);
 }
+
+/* ===== Carte "Demander à l'équipe" (composer) ===== */
+.composer {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  padding: 22px;
+  overflow: hidden;
+}
+.composer::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(50% 120% at 0% 0%, var(--orange-glow), transparent 60%);
+  pointer-events: none;
+}
+
+/* ===== Petit chip méta ===== */
+.meta-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; padding: 2px 7px; border-radius: 6px;
+  background: rgba(255,255,255,0.05); color: var(--text-secondary);
+}
+
+/* legacy (compat) */
+.agent-avatar-img { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import * as api from './services/api'
+import AmbientCanvas from './components/AmbientCanvas'
 import Layout from './components/Layout'
 import Hub from './pages/Hub'
 import Agent from './pages/Agent'
@@ -10,6 +11,8 @@ import Wizard from './pages/Wizard'
 
 function App() {
   return (
+    <>
+    <AmbientCanvas />
     <HashRouter>
       <Routes>
         <Route path="/" element={<Layout />}>
@@ -21,6 +24,7 @@ function App() {
         <Route path="/wizard" element={<Wizard />} />
       </Routes>
     </HashRouter>
+    </>
   )
 }
 
