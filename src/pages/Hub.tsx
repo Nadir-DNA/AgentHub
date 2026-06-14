@@ -1,9 +1,17 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Settings, Bot, Calendar, TrendingUp, Zap } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import type { Agent } from '../services'
 import { AGENT_META, getAllNames } from '../services/renames'
 import AgentAvatar from '../components/AgentAvatar'
+
+// Vue locale du Hub (réécriture sur données Rust prévue au Lot 6).
+interface Agent {
+  id: string
+  name: string
+  type: 'manager' | 'commercial' | 'marketing' | 'judiciaire' | 'techdata'
+  status: 'active' | 'inactive'
+  profile: string
+}
 
 export default function Hub() {
   const navigate = useNavigate()

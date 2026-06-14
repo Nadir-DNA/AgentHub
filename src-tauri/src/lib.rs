@@ -1,5 +1,7 @@
+mod agents;
 mod commands;
 mod db;
+mod llm;
 mod models;
 mod state;
 mod store;
@@ -17,6 +19,7 @@ fn open_db(app: &tauri::App) -> Connection {
     std::fs::create_dir_all(&dir).expect("création du répertoire de données");
     let conn = Connection::open(dir.join("agenthub.db")).expect("ouverture SQLite");
     db::init(&conn).expect("init schéma SQLite");
+    agents::seed_if_empty(&conn).expect("seed agents par défaut");
     conn
 }
 
@@ -45,6 +48,9 @@ pub fn run() {
             commands::get_agent,
             commands::save_agent,
             commands::delete_agent,
+            commands::send_message,
+            commands::get_history,
+            commands::clear_history,
             commands::get_usage,
         ])
         .run(tauri::generate_context!())

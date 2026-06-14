@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Send, Clock, Wrench, AlertCircle } from 'lucide-react'
-import { hermesAPI } from '../services'
-import type { Message } from '../services'
+import { ArrowLeft, Send, Clock, Wrench } from 'lucide-react'
+import * as api from '../services/api'
+import type { Message } from '../services/api'
 import { getAgentName, getAgentShort, AGENT_META } from '../services/renames'
 import AgentAvatar from '../components/AgentAvatar'
 
@@ -28,17 +28,17 @@ export default function Agent() {
   const { id = 'manager' } = useParams()
   const meta = AGENT_META[id] || AGENT_META.manager
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '0',
-      role: 'assistant',
-      content: `Bonjour ! Je suis ${getAgentName(id)}, votre assistant ${meta.title}. Comment puis-je vous aider aujourd'hui ?`,
-      timestamp: new Date(),
-    },
-  ])
+  const greeting = (): Message => ({
+    id: '0',
+    agent_id: id,
+    role: 'assistant',
+    content: `Bonjour ! Je suis ${getAgentName(id)}, votre assistant ${meta.title}. Comment puis-je vous aider aujourd'hui ?`,
+    timestamp: new Date().toISOString(),
+  })
+
+  const [messages, setMessages] = useState<Message[]>([greeting()])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isDemo, setIsDemo] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -49,24 +49,10 @@ export default function Agent() {
   }, [])
 
   useEffect(() => {
-    hermesAPI.isMockMode().then(setIsDemo)
-  }, [])
-
-  useEffect(() => {
-    hermesAPI.getHistory(id).then(msgs => {
-      if (msgs.length > 0) {
-        setMessages(msgs)
-      } else {
-        setMessages([
-          {
-            id: '0',
-            role: 'assistant',
-            content: `Bonjour ! Je suis ${getAgentName(id)}, votre assistant ${meta.title}. Comment puis-je vous aider aujourd'hui ?`,
-            timestamp: new Date(),
-          },
-        ])
-      }
-    })
+    api.getHistory(id)
+      .then(msgs => setMessages(msgs.length > 0 ? msgs : [greeting()]))
+      .catch(() => setMessages([greeting()]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, refreshKey])
 
   useEffect(() => {
@@ -79,23 +65,31 @@ export default function Agent() {
 
     const userMsg: Message = {
       id: Date.now().toString(),
+      agent_id: id,
       role: 'user',
       content,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     }
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setIsLoading(true)
 
     try {
-      const response = await hermesAPI.sendMessage(id, content)
-      setMessages(prev => [...prev, response.message])
+      const reply = await api.sendMessage(id, content)
+      setMessages(prev => [...prev, reply])
     } catch (error) {
+      const detail =
+        typeof error === 'string' ? error : error instanceof Error ? error.message : 'erreur inconnue'
+      const errContent =
+        detail === 'NO_API_KEY'
+          ? "⚠️ Aucune clé API configurée. Ajoutez votre clé OpenCode Go dans les Paramètres pour activer les réponses."
+          : `⚠️ ${detail}`
       const errorMsg: Message = {
         id: `error-${Date.now()}`,
+        agent_id: id,
         role: 'assistant',
-        content: `⚠️ Erreur : impossible de contacter l'assistant. Vérifiez que le serveur est démarré (http://localhost:8080). Détail : ${error instanceof Error ? error.message : 'erreur inconnue'}`,
-        timestamp: new Date(),
+        content: errContent,
+        timestamp: new Date().toISOString(),
       }
       setMessages(prev => [...prev, errorMsg])
     } finally {
@@ -128,31 +122,8 @@ export default function Agent() {
             </div>
           </div>
 
-          {isDemo && (
-            <div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
-              style={{
-                background: 'rgba(255, 107, 0, 0.1)',
-                border: '1px solid rgba(255, 107, 0, 0.2)',
-                color: 'var(--orange-300)',
-              }}
-            >
-              <AlertCircle className="w-3.5 h-3.5" />
-              Mode démo
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Demo banner */}
-      {isDemo && (
-        <div className="px-4 py-2 text-center" style={{ background: 'rgba(255, 107, 0, 0.05)', borderBottom: '1px solid rgba(255, 107, 0, 0.1)' }}>
-          <p className="text-xs" style={{ color: 'var(--orange-300)' }}>
-            ⚠️ Le serveur Hermes n'est pas connecté. Les réponses sont simulées.
-            <span className="ml-1" style={{ color: 'var(--text-muted)' }}>Démarrez le serveur pour des réponses réelles.</span>
-          </p>
-        </div>
-      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
