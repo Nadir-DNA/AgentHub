@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import * as api from '../services/api'
 import type { AppConfig, Agent } from '../services/api'
 import AgentAvatar from '../components/AgentAvatar'
+import { getPlan, getDaysLeft, PLAN_FEATURES } from '../services/license'
+import { Crown, Clock } from 'lucide-react'
 import { ACCENTS, setAccent, setMode, setLang, type AccentName } from '../services/preferences'
 
 const MODELS = [
@@ -24,6 +26,8 @@ export default function Settings() {
   const [accent, setAccentState] = useState<AccentName>(() => (localStorage.getItem('agenthub-accent') as AccentName) || 'Orange')
   const [mode, setModeState] = useState<'dark' | 'light'>(() => (localStorage.getItem('agenthub-mode') as 'dark' | 'light') || 'dark')
   const [lang, setLangState] = useState<'fr' | 'en'>(() => (localStorage.getItem('agenthub-lang') as 'fr' | 'en') || 'fr')
+  const [licensePlan] = useState(getPlan())
+  const [trialDays] = useState(getDaysLeft())
 
   const reload = useCallback(() => {
     api.getConfig().then(setConfig).catch(() => {})
@@ -268,6 +272,31 @@ export default function Settings() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* License / Plan */}
+        <div className="settings-section">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'var(--orange-glow)' }}>
+              <Crown className="w-5 h-5" style={{ color: 'var(--orange-400)' }} />
+            </div>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Abonnement</h2>
+          </div>
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Plan actuel</span>
+            <span className="font-semibold text-sm" style={{ color: 'var(--orange-300)' }}>{PLAN_FEATURES[licensePlan].label}</span>
+          </div>
+          {licensePlan === 'trial' && (
+            <div className="flex items-center gap-2 p-3 rounded-xl mb-4" style={{ background: 'var(--orange-glow)', border: '1px solid var(--border-subtle)' }}>
+              <Clock className="w-4 h-4" style={{ color: 'var(--orange-400)' }} />
+              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                {trialDays > 0 ? `${trialDays} jours restants en trial` : 'Trial expiré — plan Starter actif'}
+              </span>
+            </div>
+          )}
+          <a href="https://landing-five-rosy-79.vercel.app/#pricing" target="_blank" rel="noreferrer" className="btn-primary w-full inline-flex items-center justify-center gap-2">
+            <Crown className="w-4 h-4" /> {licensePlan === 'trial' ? 'Choisir un plan' : 'Changer de plan'}
+          </a>
         </div>
 
         {/* Account */}

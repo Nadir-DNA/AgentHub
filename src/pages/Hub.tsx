@@ -5,6 +5,8 @@ import { listen } from '@tauri-apps/api/event'
 import * as api from '../services/api'
 import type { Agent } from '../services/api'
 import AgentAvatar from '../components/AgentAvatar'
+import LicenseBadge from '../components/LicenseBadge'
+import { canCreateAgent } from '../services/license'
 
 // ponytail: role accents read from CSS :root vars inline
 
@@ -75,6 +77,8 @@ export default function Hub() {
     { icon: Zap, label: 'Requêtes IA · ce mois', value: usage },
   ]
 
+  const allowNewAgent = canCreateAgent(agents.length)
+
   return (
     <div className="px-6 py-8 max-w-6xl mx-auto">
       {/* Header */}
@@ -88,6 +92,7 @@ export default function Hub() {
               <Zap className="w-5 h-5 text-white" />
             </div>
             <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>AgentHub</h1>
+            <LicenseBadge />
           </div>
           <p className="text-sm ml-[56px]" style={{ color: 'var(--text-muted)' }}>Votre équipe d'assistants IA, prête à l'emploi.</p>
         </div>
@@ -175,17 +180,32 @@ export default function Hub() {
           </Link>
         ))}
 
-        {/* Add agent */}
-        <button
-          onClick={() => navigate('/agent/new/config')}
-          className="add-card flex flex-col items-center justify-center gap-2.5"
-          style={{ minHeight: 280, background: 'transparent' }}
-        >
-          <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}>
-            <Plus className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
-          </div>
-          <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Ajouter un assistant</span>
-        </button>
+        {/* Add agent — gated by license */}
+        {allowNewAgent ? (
+          <button
+            onClick={() => navigate('/agent/new/config')}
+            className="add-card flex flex-col items-center justify-center gap-2.5"
+            style={{ minHeight: 280, background: 'transparent' }}
+          >
+            <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}>
+              <Plus className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
+            </div>
+            <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Ajouter un assistant</span>
+          </button>
+        ) : (
+          <Link
+            to="/settings"
+            className="add-card flex flex-col items-center justify-center gap-2.5"
+            style={{ minHeight: 280, background: 'transparent', opacity: 0.6 }}
+          >
+            <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'var(--orange-glow)', border: '1px solid var(--orange-400)' }}>
+              <Plus className="w-5 h-5" style={{ color: 'var(--orange-400)' }} />
+            </div>
+            <span className="text-xs font-medium text-center" style={{ color: 'var(--orange-300)' }}>
+              Plan limité<br />Passer Pro pour ajouter
+            </span>
+          </Link>
+        )}
       </div>
     </div>
   )
