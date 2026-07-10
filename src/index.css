@@ -21,9 +21,9 @@
 
   /* Accents par rôle (halo des cartes) */
   --accent: var(--orange-500);
-  --role-manager: #4f8cff;
+  --role-manager: var(--orange-400);
   --role-commercial: #ff7a3c;
-  --role-marketing: #b15cff;
+  --role-marketing: var(--orange-300);
   --role-judiciaire: #f2c14e;
   --role-techdata: #2dd4bf;
 
@@ -61,8 +61,8 @@ body::before {
   pointer-events: none;
   background:
     radial-gradient(60vw 50vh at 18% -8%, rgba(255, 107, 0, 0.10), transparent 60%),
-    radial-gradient(55vw 45vh at 92% 0%, rgba(177, 92, 255, 0.07), transparent 60%),
-    radial-gradient(70vw 60vh at 50% 115%, rgba(79, 140, 255, 0.06), transparent 60%);
+    radial-gradient(55vw 45vh at 92% 0%, rgba(255, 107, 0, 0.07), transparent 60%), /* ponytail: purple removed */
+    radial-gradient(70vw 60vh at 50% 115%, rgba(255, 107, 0, 0.06), transparent 60%); /* ponytail: blue removed */
   animation: aurora-drift 26s ease-in-out infinite alternate;
 }
 
@@ -95,6 +95,57 @@ body::before {
   -webkit-user-drag: none;
 }
 .avatar-cut:hover { transform: translateY(-3px) scale(1.04); }
+
+/* ===== Avatar animations (ponytail: CSS only, no JS) ===== */
+.avatar-animated {
+  animation: avatar-float 3s ease-in-out infinite;
+  cursor: pointer;
+}
+
+.avatar-animated:hover {
+  animation-play-state: paused;
+  transform: translateY(-6px) scale(1.08);
+  filter: drop-shadow(0 16px 24px rgba(255, 107, 0, 0.35));
+}
+
+.avatar-base {
+  transition: fill 0.3s ease;
+}
+
+.avatar-animated:hover .avatar-base {
+  fill: #e8856a;
+}
+
+.avatar-accessory {
+  transform-origin: center;
+  transition: transform 0.3s ease;
+}
+
+.avatar-animated:hover .avatar-accessory {
+  animation: accessory-bounce 0.6s ease-in-out;
+}
+
+@keyframes avatar-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes accessory-bounce {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.15) rotate(5deg); }
+}
+
+/* Role-specific accessory animations */
+.avatar-animated:hover .avatar-accessory {
+  animation: accessory-role 0.8s ease-in-out;
+}
+
+@keyframes accessory-role {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.1) rotate(-3deg); }
+  75% { transform: scale(1.1) rotate(3deg); }
+  100% { transform: scale(1); }
+}
 
 /* ===== Carte d'agent — Hub (personnage sur scène) ===== */
 .agent-card {
@@ -394,5 +445,3 @@ select.input-field { cursor: pointer; }
   background: rgba(255,255,255,0.05); color: var(--text-secondary);
 }
 
-/* legacy (compat) */
-.agent-avatar-img { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }

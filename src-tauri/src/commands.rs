@@ -109,6 +109,9 @@ fn new_id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
 
+/// ponytail: cap history at last 20 messages — full history would blow the context window.
+const MAX_HISTORY: usize = 20;
+
 /// Cœur d'un tour de conversation, réutilisé par `send_message` et `ask_hub`.
 /// Persiste le message user, appelle le LLM, persiste la réponse + usage.
 /// Le MutexGuard est toujours libéré avant le `await` (future Send-safe).
@@ -123,7 +126,7 @@ pub(crate) async fn agent_turn(state: &AppState, agent_id: &str, content: String
             .map_err(map)?
             .ok_or_else(|| "NO_API_KEY".to_string())?;
         let cfg = db::get_config(&conn).map_err(map)?;
-        let history = db::get_messages(&conn, agent_id).map_err(map)?;
+        let mut history = db::get_messages(&conn, agent_id).map_err(map)?;
 
         let user_msg = Message {
             id: new_id(),
@@ -134,6 +137,11 @@ pub(crate) async fn agent_turn(state: &AppState, agent_id: &str, content: String
         };
         db::add_message(&conn, &user_msg).map_err(map)?;
 
+        // ponytail: keep only last MAX_HISTORY messages to avoid context overflow
+        if history.len() > MAX_HISTORY {
+            history = history.split_off(history.len() - MAX_HISTORY);
+        }
+
         let mut turns = vec![llm::ChatTurn::system(agent.system_prompt)];
         for m in &history {
             turns.push(llm::ChatTurn { role: m.role.clone(), content: m.content.clone() });
@@ -142,8 +150,8 @@ pub(crate) async fn agent_turn(state: &AppState, agent_id: &str, content: String
         (api_key, cfg.model, turns)
     };
 
-    // Phase 2 (async) : appel réseau au LLM.
-    let reply = llm::complete(&api_key, &model, &turns)
+    // Phase 2 (async) : appel réseau au LLM — reuses pooled client from AppState.
+    let reply = llm::complete(&state.http, &api_key, &model, &turns)
         .await
         .map_err(|e| e.to_string())?;
 

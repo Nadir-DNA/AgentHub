@@ -54,7 +54,7 @@ const SPECS: &[PackSpec] = &[
         icon: "⚖️",
         description: "Cabinet d'avocat — dossiers, RDV, conformité, facturation.",
         context: "Le client est un avocat ou juriste. Pense gestion de dossiers, confidentialité, RDV clients, déontologie, facturation d'honoraires.",
-        tools: &[("judiciaire", &["yousign", "google-drive"]), ("commercial", &["doctolib", "google-agenda"])],
+        tools: &[("judiciaire", &["yousign", "google-drive"]), ("commercial", &["whatsapp", "google-agenda"])], // ponytail: Doctolib removed, Whatsapp added
     },
     PackSpec {
         id: "garage",

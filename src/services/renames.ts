@@ -1,6 +1,5 @@
-// Gestion des noms d'agents (persistés dans localStorage)
-
-const STORAGE_KEY = 'agenthub-names'
+// ponytail: localStorage rename system deleted — DB (Rust) is the source of truth.
+// Only AGENT_META survives: prompts, tools, titles, short names per role.
 
 export const AGENT_META: Record<string, {
   short: string
@@ -75,47 +74,4 @@ export const AGENT_META: Record<string, {
     ],
     tools: ['google-drive'],
   },
-}
-
-const DEFAULT_NAMES: Record<string, string> = {
-  manager: 'Cap le Manager',
-  commercial: 'Marc le Commercial',
-  marketing: 'Shadow le Marketing',
-  judiciaire: 'Claude le Juridique',
-  techdata: 'Nova le Tech',
-}
-
-function loadRenames(): Record<string, string> {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-  } catch {
-    return {}
-  }
-}
-
-export function getAgentName(id: string): string {
-  const overrides = loadRenames()
-  return overrides[id] || DEFAULT_NAMES[id] || id
-}
-
-export function getAgentShort(id: string): string {
-  const overrides = loadRenames()
-  const custom = overrides[id]
-  if (custom) return custom.split(' ')[0] || custom
-  return AGENT_META[id]?.short || id
-}
-
-export function renameAgent(id: string, name: string): void {
-  const overrides = loadRenames()
-  const trimmed = name.trim()
-  if (trimmed && trimmed !== DEFAULT_NAMES[id]) {
-    overrides[id] = trimmed
-  } else {
-    delete overrides[id]
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides))
-}
-
-export function getAllNames(): Record<string, string> {
-  return { ...DEFAULT_NAMES, ...loadRenames() }
 }

@@ -6,13 +6,7 @@ import * as api from '../services/api'
 import type { Agent } from '../services/api'
 import AgentAvatar from '../components/AgentAvatar'
 
-const ROLE_ACCENT: Record<string, string> = {
-  manager: '#4f8cff',
-  commercial: '#ff7a3c',
-  marketing: '#b15cff',
-  judiciaire: '#f2c14e',
-  techdata: '#2dd4bf',
-}
+// ponytail: role accents read from CSS :root vars inline
 
 export default function Hub() {
   const navigate = useNavigate()
@@ -158,7 +152,7 @@ export default function Hub() {
             key={agent.id}
             to={`/agent/${agent.id}`}
             className="agent-card"
-            style={{ '--accent': ROLE_ACCENT[agent.role] || 'var(--orange-500)' } as CSSProperties}
+            style={{ '--accent': `var(--role-${agent.role}, var(--orange-500))` } as CSSProperties}
             onMouseMove={onTilt}
             onMouseLeave={resetTilt}
           >

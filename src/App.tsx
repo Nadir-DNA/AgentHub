@@ -29,7 +29,7 @@ function App() {
 }
 
 function RootRedirect() {
-  // La source de vérité est la config Rust (plus le localStorage).
+  // La source de vérité est la config Rust.
   const [view, setView] = useState<'loading' | 'hub' | 'wizard'>('loading')
 
   useEffect(() => {

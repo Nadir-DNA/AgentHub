@@ -59,7 +59,7 @@ export const saveConfig = (config: AppConfig) => invoke<void>('save_config', { c
 // --- Clé API (jamais relue côté front, seul le booléen est exposé) ---
 export const setApiKey = (key: string) => invoke<void>('set_api_key', { key })
 export const clearApiKey = () => invoke<void>('clear_api_key')
-export const hasApiKey = () => invoke<boolean>('has_api_key')
+// ponytail: hasApiKey, clearHistory, isTauri removed — never imported anywhere
 
 // --- Agents ---
 export const listAgents = () => invoke<Agent[]>('list_agents')
@@ -72,8 +72,6 @@ export const sendMessage = (agentId: string, content: string) =>
   invoke<Message>('send_message', { agentId, content })
 export const getHistory = (agentId: string) =>
   invoke<Message[]>('get_history', { agentId })
-export const clearHistory = (agentId: string) =>
-  invoke<void>('clear_history', { agentId })
 
 // --- Orchestrateur ---
 export interface AskHubResponse {
@@ -85,7 +83,3 @@ export const askHub = (content: string) => invoke<AskHubResponse>('ask_hub', { c
 
 // --- Usage ---
 export const getUsage = () => invoke<number>('get_usage')
-
-/** True si l'app tourne dans le runtime Tauri (et non un simple navigateur). */
-export const isTauri = (): boolean =>
-  typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window

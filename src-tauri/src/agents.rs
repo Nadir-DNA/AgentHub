@@ -4,7 +4,7 @@
 //! Lot 3 : les packs métier (agents/packs) enrichiront/spécialiseront ces agents.
 
 use crate::db;
-use crate::models::{Agent, Trigger};
+use crate::models::Agent;
 use rusqlite::Connection;
 
 fn agent(
@@ -78,17 +78,7 @@ pub fn seed_if_empty(conn: &Connection) -> db::Result<()> {
     Ok(())
 }
 
-/// Démo de trigger par défaut (réutilisé en Lot 6 pour le scheduler).
-#[allow(dead_code)]
-pub fn sample_trigger() -> Trigger {
-    Trigger {
-        id: "relance-j1".into(),
-        label: "Relance clients J-1".into(),
-        cron: "0 0 9 * * *".into(),
-        prompt: "Quels clients faut-il relancer aujourd'hui ?".into(),
-        enabled: true,
-    }
-}
+// ponytail: sample_trigger deleted — dead code, never called
 
 #[cfg(test)]
 mod tests {

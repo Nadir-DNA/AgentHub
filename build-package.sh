@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 echo "🦀 Build AgentHub (Tauri release)…"
-npm install
+npm ci
 npm run tauri build
 
 echo

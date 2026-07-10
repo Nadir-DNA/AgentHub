@@ -10,7 +10,8 @@ rust-version = "1.77.2"
 
 [lib]
 name = "app_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+# ponytail: desktop-only — staticlib/cdylib were for mobile FFI, not needed
+crate-type = ["rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2.6.2", features = [] }

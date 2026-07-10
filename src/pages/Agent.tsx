@@ -3,26 +3,9 @@ import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Send, Clock, Wrench, SlidersHorizontal } from 'lucide-react'
 import * as api from '../services/api'
 import type { Message, Agent } from '../services/api'
-import { getAgentName, AGENT_META } from '../services/renames'
+import { AGENT_META } from '../services/renames'
+import { TOOLS } from '../services/catalog'
 import AgentAvatar from '../components/AgentAvatar'
-
-const TOOLS_AVAILABLE = [
-  { id: 'planity', name: 'Planity', icon: '📅', category: 'planning' },
-  { id: 'doctolib', name: 'Doctolib', icon: '📅', category: 'planning' },
-  { id: 'google-agenda', name: 'Google Agenda', icon: '📅', category: 'planning' },
-  { id: 'qonto', name: 'Qonto', icon: '💰', category: 'compta' },
-  { id: 'pennylane', name: 'Pennylane', icon: '💰', category: 'compta' },
-  { id: 'whatsapp', name: 'WhatsApp', icon: '💬', category: 'messagerie' },
-  { id: 'google-avis', name: 'Google Avis', icon: '⭐', category: 'visibilité' },
-  { id: 'instagram', name: 'Instagram', icon: '📸', category: 'réseaux' },
-  { id: 'google-drive', name: 'Google Drive', icon: '☁️', category: 'stockage' },
-  { id: 'yousign', name: 'Yousign', icon: '✍️', category: 'signature' },
-]
-
-const CRONS_DEFAULT = [
-  { id: '1', label: 'Relance clients J-1', schedule: 'Chaque jour à 9h00' },
-  { id: '2', label: 'Bilan de la journée', schedule: 'Chaque soir à 18h00' },
-]
 
 export default function Agent() {
   const { id = 'manager' } = useParams()
@@ -30,40 +13,42 @@ export default function Agent() {
 
   const role = agent?.role ?? id
   const meta = AGENT_META[role] || AGENT_META.manager
-  const displayName = agent?.name ?? getAgentName(id)
+  const displayName = agent?.name ?? meta.title // ponytail: Use AGENT_META.title as default, not renames.getAgentName
   const displayTitle = agent?.title ?? meta.title
   const agentTools = agent?.tools ?? meta.tools
   const shortName = displayName.split(' ')[0] || displayName
 
-  const greeting = (): Message => ({
-    id: '0',
-    agent_id: id,
-    role: 'assistant',
-    content: `Bonjour ! Je suis ${displayName}, votre assistant ${displayTitle}. Comment puis-je vous aider aujourd'hui ?`,
-    timestamp: new Date().toISOString(),
-  })
-
-  const [messages, setMessages] = useState<Message[]>([greeting()])
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // ponytail: Greeting creation now depends on agent state, moved inside .then
   useEffect(() => {
+    api.getAgent(id).then(loadedAgent => {
+      setAgent(loadedAgent)
+      const name = loadedAgent?.name ?? meta.title
+      const title = loadedAgent?.title ?? meta.title
+      const initialGreeting: Message = {
+        id: '0',
+        agent_id: id,
+        role: 'assistant',
+        content: `Bonjour ! Je suis ${name}, votre assistant ${title}. Comment puis-je vous aider aujourd'hui ?`,
+        timestamp: new Date().toISOString(),
+      }
+      api.getHistory(id)
+        .then(msgs => setMessages(msgs.length > 0 ? msgs : [initialGreeting]))
+        .catch(() => setMessages([initialGreeting]))
+    }).catch(() => setAgent(null))
+
     const handler = () => setRefreshKey(n => n + 1)
+    window.addEventListener('agenthub-agents-changed', handler)
     window.addEventListener('agenthub-rename', handler)
-    return () => window.removeEventListener('agenthub-rename', handler)
-  }, [])
-
-  useEffect(() => {
-    api.getAgent(id).then(setAgent).catch(() => setAgent(null))
-  }, [id, refreshKey])
-
-  useEffect(() => {
-    api.getHistory(id)
-      .then(msgs => setMessages(msgs.length > 0 ? msgs : [greeting()]))
-      .catch(() => setMessages([greeting()]))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      window.removeEventListener('agenthub-agents-changed', handler)
+      window.removeEventListener('agenthub-rename', handler)
+    }
   }, [id, refreshKey])
 
   useEffect(() => {
@@ -116,10 +101,8 @@ export default function Agent() {
           <div className="flex items-center gap-3">
             <Link
               to="/"
-              className="p-2 rounded-lg transition-all"
+              className="p-2 rounded-lg transition-all hover:bg-[var(--bg-elevated)]"
               style={{ color: 'var(--text-secondary)' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
@@ -135,11 +118,9 @@ export default function Agent() {
 
           <Link
             to={`/agent/${id}/config`}
-            className="p-2 rounded-lg transition-all"
+            className="p-2 rounded-lg transition-all hover:bg-[var(--bg-elevated)]"
             style={{ color: 'var(--text-secondary)' }}
             title="Configurer cet assistant"
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-elevated)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
             <SlidersHorizontal className="w-5 h-5" />
           </Link>
@@ -197,11 +178,14 @@ export default function Agent() {
       <div className="shrink-0 px-6 py-2" style={{ borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)' }}>
         <div className="max-w-3xl mx-auto flex items-center gap-2 overflow-x-auto">
           <Clock className="w-3 h-3 shrink-0" style={{ color: 'var(--text-muted)' }} />
-          {CRONS_DEFAULT.map(c => (
+          {agent?.triggers.filter(t => t.enabled).map(c => ( // ponytail: Use actual agent.triggers instead of CRONS_DEFAULT
             <span key={c.id} className="cron-badge">
-              ⏰ {c.label} <span style={{ color: 'var(--text-muted)' }}>→ {c.schedule}</span>
+              ⏰ {c.label} <span style={{ color: 'var(--text-muted)' }}>→ {c.cron}</span>
             </span>
           ))}
+          {agent?.triggers.filter(t => !t.enabled).length === 0 && agent?.triggers.length === 0 && ( // ponytail: Show a message when no triggers
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Aucune tâche planifiée.</span>
+          )}
         </div>
       </div>
 
@@ -209,10 +193,10 @@ export default function Agent() {
       <div className="shrink-0 px-6 py-2" style={{ borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)' }}>
         <div className="max-w-3xl mx-auto flex items-center gap-2 overflow-x-auto">
           <Wrench className="w-3 h-3 shrink-0" style={{ color: 'var(--text-muted)' }} />
-          {TOOLS_AVAILABLE.filter(t => agentTools.includes(t.id)).map(t => (
+          {TOOLS.filter(t => agentTools.includes(t.id)).map(t => (
             <span key={t.id} className="tool-badge active">✅ {t.name}</span>
           ))}
-          {TOOLS_AVAILABLE.filter(t => !agentTools.includes(t.id)).slice(0, 3).map(t => (
+          {TOOLS.filter(t => !agentTools.includes(t.id)).slice(0, 3).map(t => (
             <span key={t.id} className="tool-badge">⬜ {t.name}</span>
           ))}
         </div>

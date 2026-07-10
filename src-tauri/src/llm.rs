@@ -7,7 +7,6 @@
 use serde::{Deserialize, Serialize};
 
 const ENDPOINT: &str = "https://opencode.ai/zen/go/v1/chat/completions";
-const TIMEOUT_SECS: u64 = 90;
 
 #[derive(Debug, thiserror::Error)]
 pub enum LlmError {
@@ -62,12 +61,8 @@ struct ResponseMessage {
 }
 
 /// Envoie une complétion et renvoie le texte de la réponse de l'assistant.
-pub async fn complete(api_key: &str, model: &str, turns: &[ChatTurn]) -> Result<String, LlmError> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(TIMEOUT_SECS))
-        .build()
-        .map_err(|e| LlmError::Network(e.to_string()))?;
-
+/// ponytail: client est passé par AppState pour le connection pooling.
+pub async fn complete(client: &reqwest::Client, api_key: &str, model: &str, turns: &[ChatTurn]) -> Result<String, LlmError> {
     let body = ChatRequest { model, messages: turns, temperature: 0.4 };
 
     let resp = client
@@ -106,6 +101,7 @@ fn truncate(s: &str, max: usize) -> String {
     if s.len() <= max {
         s.to_string()
     } else {
-        format!("{}…", &s[..max])
+        // ponytail: chars() is UTF-8 safe — byte slice &[..max] panics on multi-byte
+        format!("{}…", s.chars().take(max).collect::<String>())
     }
 }
