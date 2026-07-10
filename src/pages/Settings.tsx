@@ -1,9 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Key, Cpu, User, Check, Trash2, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, Key, Cpu, User, Check, Trash2, SlidersHorizontal, Palette, Moon, Sun, Languages } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import * as api from '../services/api'
 import type { AppConfig, Agent } from '../services/api'
 import AgentAvatar from '../components/AgentAvatar'
+import { ACCENTS, setAccent, setMode, setLang, type AccentName } from '../services/preferences'
 
 const MODELS = [
   { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash — rapide & économique' },
@@ -20,6 +21,9 @@ export default function Settings() {
   const [usage, setUsage] = useState(0)
   const [keyInput, setKeyInput] = useState('')
   const [savedFlash, setSavedFlash] = useState(false)
+  const [accent, setAccentState] = useState<AccentName>(() => (localStorage.getItem('agenthub-accent') as AccentName) || 'Orange')
+  const [mode, setModeState] = useState<'dark' | 'light'>(() => (localStorage.getItem('agenthub-mode') as 'dark' | 'light') || 'dark')
+  const [lang, setLangState] = useState<'fr' | 'en'>(() => (localStorage.getItem('agenthub-lang') as 'fr' | 'en') || 'fr')
 
   const reload = useCallback(() => {
     api.getConfig().then(setConfig).catch(() => {})
@@ -61,6 +65,19 @@ export default function Settings() {
     navigate('/wizard')
   }
 
+  const onAccent = (name: AccentName) => {
+    setAccent(name)
+    setAccentState(name)
+  }
+  const onMode = (m: 'dark' | 'light') => {
+    setMode(m)
+    setModeState(m)
+  }
+  const onLang = (l: 'fr' | 'en') => {
+    setLang(l)
+    setLangState(l)
+  }
+
   return (
     <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
@@ -95,6 +112,86 @@ export default function Settings() {
           >
             {MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
           </select>
+        </div>
+
+        {/* Appearance */}
+        <div className="settings-section">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'var(--orange-glow)' }}>
+              <Palette className="w-5 h-5" style={{ color: 'var(--orange-400)' }} />
+            </div>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Apparence</h2>
+          </div>
+          {/* Accent color */}
+          <label className="block text-sm mb-3" style={{ color: 'var(--text-muted)' }}>Couleur d'accent</label>
+          <div className="flex gap-3 flex-wrap">
+            {ACCENTS.map(a => (
+              <button
+                key={a.name}
+                onClick={() => onAccent(a.name)}
+                className="rounded-full flex items-center justify-center transition-transform"
+                style={{
+                  width: 36, height: 36,
+                  background: a.color,
+                  outline: accent === a.name ? `2px solid ${a.color}` : 'none',
+                  outlineOffset: accent === a.name ? 2 : 0,
+                  transform: accent === a.name ? 'scale(1.15)' : 'scale(1)',
+                }}
+              >
+                {accent === a.name && <Check className="w-4 h-4 text-white" />}
+              </button>
+            ))}
+          </div>
+          {/* Mode */}
+          <label className="block text-sm mb-3 mt-5" style={{ color: 'var(--text-muted)' }}>Thème</label>
+          <div className="flex gap-3">
+            <button
+              onClick={() => onMode('dark')}
+              className="rounded-xl px-5 py-2.5 text-sm font-semibold flex items-center gap-2"
+              style={{
+                background: mode === 'dark' ? 'var(--orange-glow-strong)' : 'var(--bg-secondary)',
+                border: `1px solid ${mode === 'dark' ? 'var(--orange-400)' : 'var(--border-subtle)'}`,
+                color: mode === 'dark' ? 'var(--orange-300)' : 'var(--text-muted)',
+              }}
+            >
+              <Moon className="w-4 h-4" /> Sombre
+            </button>
+            <button
+              onClick={() => onMode('light')}
+              className="rounded-xl px-5 py-2.5 text-sm font-semibold flex items-center gap-2"
+              style={{
+                background: mode === 'light' ? 'var(--orange-glow-strong)' : 'var(--bg-secondary)',
+                border: `1px solid ${mode === 'light' ? 'var(--orange-400)' : 'var(--border-subtle)'}`,
+                color: mode === 'light' ? 'var(--orange-300)' : 'var(--text-muted)',
+              }}
+            >
+              <Sun className="w-4 h-4" /> Clair
+            </button>
+          </div>
+          {/* Language */}
+          <label className="block text-sm mb-3 mt-5" style={{ color: 'var(--text-muted)' }}>
+            <Languages className="w-4 h-4 inline mr-1" /> Langue
+          </label>
+          <div className="flex gap-3">
+            <button
+              onClick={() => onLang('fr')}
+              className="rounded-xl px-5 py-2.5 text-sm font-semibold"
+              style={{
+                background: lang === 'fr' ? 'var(--orange-glow-strong)' : 'var(--bg-secondary)',
+                border: `1px solid ${lang === 'fr' ? 'var(--orange-400)' : 'var(--border-subtle)'}`,
+                color: lang === 'fr' ? 'var(--orange-300)' : 'var(--text-muted)',
+              }}
+            >Français</button>
+            <button
+              onClick={() => onLang('en')}
+              className="rounded-xl px-5 py-2.5 text-sm font-semibold"
+              style={{
+                background: lang === 'en' ? 'var(--orange-glow-strong)' : 'var(--bg-secondary)',
+                border: `1px solid ${lang === 'en' ? 'var(--orange-400)' : 'var(--border-subtle)'}`,
+                color: lang === 'en' ? 'var(--orange-300)' : 'var(--text-muted)',
+              }}
+            >English</button>
+          </div>
         </div>
 
         {/* API key */}
